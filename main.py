@@ -445,53 +445,67 @@ pre{
 </div>
 
 <script>
-const tg = window.Telegram?.WebApp;
-if (tg) {
+/* ===== SAFE TELEGRAM INIT ===== */
+let USER_ID = 0;
+
+if (window.Telegram && window.Telegram.WebApp) {
+  const tg = window.Telegram.WebApp;
   tg.expand();
   tg.ready();
+
+  if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+    USER_ID = tg.initDataUnsafe.user.id;
+  }
 }
 
-const USER_ID =
-  tg?.initDataUnsafe?.user?.id ||
-  tg?.initDataUnsafe?.user_id ||
-  0;
-
+/* ===== DOM ===== */
 const API = location.origin;
-
-let currentProject = null;
 
 const select = document.getElementById("projectSelect");
 const taskText = document.getElementById("taskText");
 const codeText = document.getElementById("codeText");
+const btnGenerate = document.getElementById("btnGenerate");
+const btnSave = document.getElementById("btnSave");
+const btnDelete = document.getElementById("btnDelete");
+const btnTests = document.getElementById("btnTests");
+const btnSend = document.getElementById("btnSend");
 
-// ===== LOAD PROJECTS =====
-async function loadProjects(){
-  const r = await fetch(API + '/projects/list/' + USER_ID);
+let currentProject = null;
+
+/* ===== GUARD ===== */
+if (!btnGenerate) {
+  alert("btnGenerate NOT FOUND");
+}
+
+/* ===== LOAD PROJECTS ===== */
+async function loadProjects() {
+  if (!USER_ID) return;
+
+  const r = await fetch(API + "/projects/list/" + USER_ID);
   const data = await r.json();
 
   select.innerHTML =
     '<option value="">➕ New project</option>' +
-    data.map(p =>
-      `<option value="${p.id}">${p.title}</option>`
-    ).join('');
+    data.map(p => `<option value="${p.id}">${p.title}</option>`).join("");
 }
 
-select.addEventListener('change', async () => {
+/* ===== SELECT ===== */
+select.addEventListener("change", async () => {
   if (!select.value) {
     currentProject = null;
     return;
   }
 
   currentProject = select.value;
-  const r = await fetch(API + '/projects/' + currentProject);
+  const r = await fetch(API + "/projects/" + currentProject);
   const p = await r.json();
 
   taskText.value = p.task;
   codeText.textContent = p.code;
 });
 
-// ===== GENERATE =====
-document.getElementById("btnGenerate").addEventListener("click", async () => {
+/* ===== GENERATE ===== */
+btnGenerate.addEventListener("click", async () => {
   codeText.textContent = "⏳ Generating code...";
 
   try {
@@ -505,54 +519,22 @@ document.getElementById("btnGenerate").addEventListener("click", async () => {
     });
 
     const raw = await r.text();
-    console.log("RAW RESPONSE:", raw);
-
     const data = JSON.parse(raw);
 
-    if (!r.ok) {
-      throw new Error(data.error || "Server error");
-    }
-
     codeText.textContent = data.code || "❌ Empty response";
-
-  } catch (e) {
-    console.error(e);
-    codeText.textContent = "❌ " + e.message;
-  }
-});
-
-// ===== TEST =====
-document.getElementById("btnTests").addEventListener("click", async () => {
-  codeText.textContent = "🧪 Running tests...";
-
-  try {
-    const r = await fetch(API + "/tests/run", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        code: codeText.textContent
-      })
-    });
-
-    const data = await r.json();
-
-    codeText.textContent =
-      (data.ok ? "✅ Tests passed\n\n" : "❌ Tests failed\n\n") +
-      data.output;
-
   } catch (e) {
     codeText.textContent = "❌ " + e.message;
   }
 });
 
-// ===== SAVE =====
-document.getElementById("btnSave").addEventListener("click", async () => {
-  await fetch(API + '/projects/save', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+/* ===== SAVE ===== */
+btnSave.addEventListener("click", async () => {
+  await fetch(API + "/projects/save", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       user_id: USER_ID,
-      title: taskText.value.slice(0,40) || 'Untitled',
+      title: taskText.value.slice(0, 40) || "Untitled",
       task: taskText.value,
       code: codeText.textContent
     })
@@ -560,8 +542,41 @@ document.getElementById("btnSave").addEventListener("click", async () => {
   loadProjects();
 });
 
-// ===== SEND TO CHAT =====
-document.getElementById("btnSend").addEventListener("click", async () => {
+/* ===== DELETE ===== */
+btnDelete.addEventListener("click", async () => {
+  if (!currentProject) return;
+
+  await fetch(API + "/projects/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: USER_ID,
+      project_id: currentProject
+    })
+  });
+
+  taskText.value = "";
+  codeText.textContent = "";
+  loadProjects();
+});
+
+/* ===== TESTS ===== */
+btnTests.addEventListener("click", async () => {
+  codeText.textContent = "🧪 Running tests...";
+
+  const r = await fetch(API + "/tests/run", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code: codeText.textContent })
+  });
+
+  const data = await r.json();
+  codeText.textContent =
+    (data.ok ? "✅ Tests passed\n\n" : "❌ Tests failed\n\n") + data.output;
+});
+
+/* ===== SEND TO CHAT ===== */
+btnSend.addEventListener("click", async () => {
   await fetch(API + "/projects/send_to_chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -572,27 +587,10 @@ document.getElementById("btnSend").addEventListener("click", async () => {
     })
   });
 
-  alert("📤 Project sent to chat as .py file");
+  alert("📤 Sent to chat");
 });
 
-// ===== DELETE =====
-document.getElementById("btnDelete").addEventListener("click", async () => {
-  if (!currentProject) return;
-
-  await fetch(API + '/projects/delete', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      user_id: USER_ID,
-      project_id: currentProject
-    })
-  });
-
-  taskText.value = '';
-  codeText.textContent = '';
-  loadProjects();
-});
-
+/* ===== INIT ===== */
 loadProjects();
 </script>
 </body>
@@ -656,6 +654,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

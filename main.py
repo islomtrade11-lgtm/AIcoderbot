@@ -15,7 +15,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")                 # BotFather
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 APP_URL = os.getenv("APP_URL")                     # https://xxx.up.railway.app
 
-MODEL = "deepseek/deepseek-coder"
+MODEL = "mistralai/mistral-7b-instruct"
 DB_PATH = "db.sqlite"
 # =====================================================
 
@@ -550,6 +550,7 @@ async def start_bot():
 async def startup():
     await init_db()
     asyncio.create_task(start_bot())
+
 
 
 

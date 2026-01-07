@@ -1,16 +1,25 @@
 import os
+import asyncio
 import aiosqlite
 import httpx
+
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-# ================= CONFIG =================
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
+
+# ======================= CONFIG =======================
+BOT_TOKEN = os.getenv("BOT_TOKEN")                 # BotFather
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+APP_URL = os.getenv("APP_URL")                     # https://xxx.up.railway.app
+
 MODEL = "deepseek/deepseek-coder"
 DB_PATH = "db.sqlite"
-# =========================================
+# =====================================================
 
+# ======================= FASTAPI ======================
 app = FastAPI()
 
 SYSTEM_PROMPT = """
@@ -20,12 +29,12 @@ Return ONLY full working code.
 """
 
 PROMPT_ENHANCER = """
-Rewrite the user's request into a clear, detailed software engineering task.
+Rewrite the user's request into a precise software engineering task.
 Add missing technical details.
 Focus on implementation.
 """
 
-# ================= DATABASE =================
+# ======================= DATABASE =====================
 
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
@@ -41,27 +50,7 @@ async def init_db():
         """)
         await db.commit()
 
-@app.on_event("startup")
-async def startup():
-    await init_db()
-
-# ================= MODELS =================
-
-class GenerateRequest(BaseModel):
-    user_id: int
-    text: str
-
-class SaveProject(BaseModel):
-    user_id: int
-    title: str
-    task: str
-    code: str
-
-class DeleteProject(BaseModel):
-    user_id: int
-    project_id: int
-
-# ================= LLM ====================
+# ======================= LLM ==========================
 
 async def call_llm(messages):
     async with httpx.AsyncClient(timeout=90) as client:
@@ -80,10 +69,26 @@ async def call_llm(messages):
         )
         return r.json()["choices"][0]["message"]["content"]
 
-# ================= API ====================
+# ======================= API MODELS ===================
+
+class Generate(BaseModel):
+    user_id: int
+    text: str
+
+class SaveProject(BaseModel):
+    user_id: int
+    title: str
+    task: str
+    code: str
+
+class DeleteProject(BaseModel):
+    user_id: int
+    project_id: int
+
+# ======================= API ==========================
 
 @app.post("/generate")
-async def generate(req: GenerateRequest):
+async def generate(req: Generate):
     enhanced = await call_llm([
         {"role": "system", "content": PROMPT_ENHANCER},
         {"role": "user", "content": req.text}
@@ -93,7 +98,6 @@ async def generate(req: GenerateRequest):
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": enhanced}
     ])
-
     return {"code": code}
 
 @app.post("/projects/save")
@@ -136,11 +140,11 @@ async def delete_project(p: DeleteProject):
         await db.commit()
     return {"status": "deleted"}
 
-# ================= MINI APP =================
+# ======================= MINI APP =====================
 
 @app.get("/", response_class=HTMLResponse)
 async def mini_app():
-    return """
+    return f"""
 <!DOCTYPE html>
 <html>
 <head>
@@ -148,16 +152,16 @@ async def mini_app():
 <title>AI Code Studio</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-body{margin:0;font-family:monospace;background:#0e0e0e;color:#eee}
-.app{display:flex;height:100vh}
-#projects{width:20%;background:#111;padding:10px;overflow:auto}
-#projects div{cursor:pointer;padding:5px}
-#main{width:80%;display:flex}
-textarea,pre{width:50%;padding:15px;border:none;outline:none}
-textarea{background:#111;color:#fff}
-pre{background:#000;overflow:auto}
-.controls{position:fixed;bottom:0;left:20%;right:0;background:#111;padding:10px}
-button{margin:5px;padding:8px;background:#222;color:#fff;border:none}
+body{{margin:0;font-family:monospace;background:#0e0e0e;color:#eee}}
+.app{{display:flex;height:100vh}}
+#projects{{width:20%;background:#111;padding:10px;overflow:auto}}
+#projects div{{padding:5px;cursor:pointer}}
+#main{{width:80%;display:flex}}
+textarea,pre{{width:50%;padding:15px;border:none;outline:none}}
+textarea{{background:#111;color:#fff}}
+pre{{background:#000;overflow:auto}}
+.controls{{position:fixed;bottom:0;left:20%;right:0;background:#111;padding:10px}}
+button{{margin:5px;padding:8px;background:#222;color:#fff;border:none}}
 </style>
 </head>
 <body>
@@ -177,65 +181,92 @@ button{margin:5px;padding:8px;background:#222;color:#fff;border:none}
 <script>
 const tg = window.Telegram.WebApp;
 tg.expand();
-let currentProjectId=null;
+let currentProject=null;
 
-async function loadProjects(){
-  const r=await fetch(`/projects/list/${tg.initDataUnsafe.user.id}`);
+async function loadProjects(){{
+  const r=await fetch('/projects/list/'+tg.initDataUnsafe.user.id);
   const data=await r.json();
-  document.getElementById("projects").innerHTML=
-    data.map(p=>`<div onclick="openProject(${p.id})">📄 ${p.title}</div>`).join("");
-}
+  projects.innerHTML=data.map(p=>`<div onclick="openProject(${p.id})">📄 ${p.title}</div>`).join('');
+}}
 loadProjects();
 
-async function openProject(id){
-  currentProjectId=id;
-  const r=await fetch(`/projects/${id}`);
+async function openProject(id){{
+  currentProject=id;
+  const r=await fetch('/projects/'+id);
   const p=await r.json();
   task.value=p.task;
   code.textContent=p.code;
-}
+}}
 
-async function generate(){
-  const r=await fetch("/generate",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
+async function generate(){{
+  const r=await fetch('/generate',{{
+    method:'POST',
+    headers:{{'Content-Type':'application/json'}},
+    body:JSON.stringify({{
       user_id:tg.initDataUnsafe.user.id,
       text:task.value
-    })
-  });
+    }})
+  }});
   code.textContent=(await r.json()).code;
-}
+}}
 
-async function saveProject(){
-  await fetch("/projects/save",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
+async function saveProject(){{
+  await fetch('/projects/save',{{
+    method:'POST',
+    headers:{{'Content-Type':'application/json'}},
+    body:JSON.stringify({{
       user_id:tg.initDataUnsafe.user.id,
       title:task.value.slice(0,40),
       task:task.value,
       code:code.textContent
-    })
-  });
+    }})
+  }});
   loadProjects();
-}
+}}
 
-async function deleteProject(){
-  if(!currentProjectId)return;
-  await fetch("/projects/delete",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
+async function deleteProject(){{
+  if(!currentProject)return;
+  await fetch('/projects/delete',{{
+    method:'POST',
+    headers:{{'Content-Type':'application/json'}},
+    body:JSON.stringify({{
       user_id:tg.initDataUnsafe.user.id,
-      project_id:currentProjectId
-    })
-  });
-  task.value="";
-  code.textContent="";
+      project_id:currentProject
+    }})
+  }});
+  task.value='';code.textContent='';
   loadProjects();
-}
+}}
 </script>
 </body>
 </html>
 """
+
+# ======================= TELEGRAM BOT =================
+
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher()
+
+@dp.message()
+async def start(msg: types.Message):
+    kb = ReplyKeyboardMarkup(
+        keyboard=[[
+            KeyboardButton(
+                text="🚀 Open Code Studio",
+                web_app=WebAppInfo(url=APP_URL)
+            )
+        ]],
+        resize_keyboard=True
+    )
+    await msg.answer(
+        "💻 AI Code Studio\n\nJust open and start coding.",
+        reply_markup=kb
+    )
+
+async def start_bot():
+    await dp.start_polling(bot)
+
+@app.on_event("startup")
+async def startup():
+    await init_db()
+    asyncio.create_task(start_bot())

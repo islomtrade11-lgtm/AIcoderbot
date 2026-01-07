@@ -610,12 +610,13 @@ loadProjects();
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.types import Update
 from fastapi import Request, HTTPException
+from aiogram.filters import Command
 
 session = AiohttpSession(timeout=60)
 bot = Bot(token=BOT_TOKEN, session=session)
 dp = Dispatcher()
 
-@dp.message(commands=["start"])
+@dp.message(Command("start"))
 async def start(msg: types.Message):
     await msg.answer(
         "💻 AI Code Studio\n\n"
@@ -663,6 +664,7 @@ async def on_startup():
     )
 
     print("✅ Webhook + Menu Button enabled")
+
 
 
 

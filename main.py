@@ -206,6 +206,55 @@ async def delete_project(p: DeleteProject):
     except Exception as e:
         print("❌ DELETE PROJECT ERROR:", repr(e))
         return {"error": "Failed to delete project"}
+        import tempfile
+        
+import subprocess
+import os
+import textwrap
+from pydantic import BaseModel
+
+class TestRequest(BaseModel):
+    code: str
+
+@app.post("/tests/run")
+async def run_tests(req: TestRequest):
+    with tempfile.TemporaryDirectory() as tmp:
+        app_file = os.path.join(tmp, "app.py")
+        test_file = os.path.join(tmp, "test_app.py")
+
+        # сохраняем код проекта
+        with open(app_file, "w", encoding="utf-8") as f:
+            f.write(req.code)
+
+        # простой автотест (проверка, что код хотя бы импортируется)
+        with open(test_file, "w", encoding="utf-8") as f:
+            f.write(textwrap.dedent("""
+                import app
+
+                def test_import():
+                    assert app is not None
+            """))
+
+        try:
+            result = subprocess.run(
+                ["pytest", "-q"],
+                cwd=tmp,
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+
+            return {
+                "ok": result.returncode == 0,
+                "output": result.stdout + result.stderr
+            }
+
+        except Exception as e:
+            return {
+                "ok": False,
+                "output": str(e)
+            }
+
 
 # ======================= MINI APP =====================
 
@@ -363,6 +412,8 @@ pre{
   <div class="row">
     <button class="btn success" id="btnSave">💾 Save</button>
     <button class="btn danger" id="btnDelete">🗑 Delete</button>
+    <button class="btn success" id="btnTests">🧪 Run tests</button>
+    <button class="btn primary" id="btnSend">📤 Send to chat</button>
   </div>
 </div>
 
@@ -445,6 +496,30 @@ document.getElementById("btnGenerate").addEventListener("click", async () => {
   }
 });
 
+// ===== TEST =====
+document.getElementById("btnTests").addEventListener("click", async () => {
+  codeText.textContent = "🧪 Running tests...";
+
+  try {
+    const r = await fetch(API + "/tests/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: codeText.textContent
+      })
+    });
+
+    const data = await r.json();
+
+    codeText.textContent =
+      (data.ok ? "✅ Tests passed\n\n" : "❌ Tests failed\n\n") +
+      data.output;
+
+  } catch (e) {
+    codeText.textContent = "❌ " + e.message;
+  }
+});
+
 // ===== SAVE =====
 document.getElementById("btnSave").addEventListener("click", async () => {
   await fetch(API + '/projects/save', {
@@ -458,6 +533,45 @@ document.getElementById("btnSave").addEventListener("click", async () => {
     })
   });
   loadProjects();
+});
+
+from aiogram.types import BufferedInputFile
+
+class SendProject(BaseModel):
+    user_id: int
+    title: str
+    code: str
+
+@app.post("/projects/send_to_chat")
+async def send_project_to_chat(p: SendProject):
+    file_bytes = p.code.encode("utf-8")
+
+    document = BufferedInputFile(
+        file=file_bytes,
+        filename=f"{p.title or 'project'}.py"
+    )
+
+    await bot.send_document(
+        chat_id=p.user_id,
+        document=document,
+        caption=f"📦 {p.title}"
+    )
+
+    return {"status": "sent"}
+
+// ===== SEND TO CHAT =====
+document.getElementById("btnSend").addEventListener("click", async () => {
+  await fetch(API + "/projects/send_to_chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: USER_ID,
+      title: taskText.value.slice(0, 40) || "project",
+      code: codeText.textContent
+    })
+  });
+
+  alert("📤 Project sent to chat as .py file");
 });
 
 // ===== DELETE =====
@@ -541,6 +655,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

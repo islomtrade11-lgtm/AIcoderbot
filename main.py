@@ -144,102 +144,231 @@ async def delete_project(p: DeleteProject):
 
 @app.get("/", response_class=HTMLResponse)
 async def mini_app():
-    return f"""
+    return """
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <title>AI Code Studio</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
 <style>
-body{{margin:0;font-family:monospace;background:#0e0e0e;color:#eee}}
-.app{{display:flex;height:100vh}}
-#projects{{width:20%;background:#111;padding:10px;overflow:auto}}
-#projects div{{padding:5px;cursor:pointer}}
-#main{{width:80%;display:flex}}
-textarea,pre{{width:50%;padding:15px;border:none;outline:none}}
-textarea{{background:#111;color:#fff}}
-pre{{background:#000;overflow:auto}}
-.controls{{position:fixed;bottom:0;left:20%;right:0;background:#111;padding:10px}}
-button{{margin:5px;padding:8px;background:#222;color:#fff;border:none}}
+:root {
+  --bg: #0b0f14;
+  --panel: #111827;
+  --panel-light: #1f2937;
+  --border: #2a3441;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+}
+
+/* ---------- SIDEBAR ---------- */
+#projects {
+  width: 260px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 16px;
+  overflow-y: auto;
+}
+
+#projects h3 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.project {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 6px;
+  background: transparent;
+}
+
+.project:hover {
+  background: var(--panel-light);
+}
+
+/* ---------- MAIN ---------- */
+#main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- EDITORS ---------- */
+.editors {
+  flex: 1;
+  display: flex;
+}
+
+textarea {
+  width: 50%;
+  padding: 16px;
+  background: #0f172a;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 14px;
+  resize: none;
+}
+
+pre {
+  width: 50%;
+  margin: 0;
+  padding: 16px;
+  background: #020617;
+  overflow: auto;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ---------- CONTROLS ---------- */
+.controls {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+
+button {
+  padding: 8px 14px;
+  background: var(--panel-light);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+button.primary:hover {
+  background: var(--accent-hover);
+}
+
+button:hover {
+  background: #273449;
+}
 </style>
 </head>
+
 <body>
 <div class="app">
-  <div id="projects"></div>
-  <div id="main">
-    <textarea id="task" placeholder="Describe what you want to build..."></textarea>
-    <pre id="code"></pre>
+
+  <!-- SIDEBAR -->
+  <div id="projects">
+    <h3>Projects</h3>
   </div>
-</div>
-<div class="controls">
-  <button onclick="generate()">Generate</button>
-  <button onclick="saveProject()">Save</button>
-  <button onclick="deleteProject()">Delete</button>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div class="editors">
+      <textarea id="task" placeholder="Describe what you want to build..."></textarea>
+      <pre id="code"></pre>
+    </div>
+
+    <div class="controls">
+      <button class="primary" onclick="generate()">Generate</button>
+      <button onclick="saveProject()">Save</button>
+      <button onclick="deleteProject()">Delete</button>
+    </div>
+  </div>
+
 </div>
 
 <script>
 const tg = window.Telegram.WebApp;
 tg.expand();
-let currentProject=null;
 
-async function loadProjects(){{
-  const r=await fetch('/projects/list/'+tg.initDataUnsafe.user.id);
-  const data=await r.json();
-projects.innerHTML = data.map(p =>
-  `<div onclick="openProject(${{p.id}})">📄 ${{p.title}}</div>`
-).join('');
+let currentProject = null;
+const projectsEl = document.getElementById("projects");
+const task = document.getElementById("task");
+const code = document.getElementById("code");
 
-}}
+async function loadProjects() {
+  const r = await fetch('/projects/list/' + tg.initDataUnsafe.user.id);
+  const data = await r.json();
+  projectsEl.innerHTML = '<h3>Projects</h3>' +
+    data.map(p =>
+      `<div class="project" onclick="openProject(${{p.id}})">📄 ${{p.title}}</div>`
+    ).join('');
+}
+
+async function openProject(id) {
+  currentProject = id;
+  const r = await fetch('/projects/' + id);
+  const p = await r.json();
+  task.value = p.task;
+  code.textContent = p.code;
+}
+
+async function generate() {
+  const r = await fetch('/generate', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      user_id: tg.initDataUnsafe.user.id,
+      text: task.value
+    })
+  });
+  code.textContent = (await r.json()).code;
+}
+
+async function saveProject() {
+  await fetch('/projects/save', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      user_id: tg.initDataUnsafe.user.id,
+      title: task.value.slice(0, 40) || 'Untitled project',
+      task: task.value,
+      code: code.textContent
+    })
+  });
+  loadProjects();
+}
+
+async function deleteProject() {
+  if (!currentProject) return;
+  await fetch('/projects/delete', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      user_id: tg.initDataUnsafe.user.id,
+      project_id: currentProject
+    })
+  });
+  task.value = '';
+  code.textContent = '';
+  loadProjects();
+}
+
 loadProjects();
-
-async function openProject(id){{
-  currentProject=id;
-  const r=await fetch('/projects/'+id);
-  const p=await r.json();
-  task.value=p.task;
-  code.textContent=p.code;
-}}
-
-async function generate(){{
-  const r=await fetch('/generate',{{
-    method:'POST',
-    headers:{{'Content-Type':'application/json'}},
-    body:JSON.stringify({{
-      user_id:tg.initDataUnsafe.user.id,
-      text:task.value
-    }})
-  }});
-  code.textContent=(await r.json()).code;
-}}
-
-async function saveProject(){{
-  await fetch('/projects/save',{{
-    method:'POST',
-    headers:{{'Content-Type':'application/json'}},
-    body:JSON.stringify({{
-      user_id:tg.initDataUnsafe.user.id,
-      title:task.value.slice(0,40),
-      task:task.value,
-      code:code.textContent
-    }})
-  }});
-  loadProjects();
-}}
-
-async function deleteProject(){{
-  if(!currentProject)return;
-  await fetch('/projects/delete',{{
-    method:'POST',
-    headers:{{'Content-Type':'application/json'}},
-    body:JSON.stringify({{
-      user_id:tg.initDataUnsafe.user.id,
-      project_id:currentProject
-    }})
-  }});
-  task.value='';code.textContent='';
-  loadProjects();
-}}
 </script>
 </body>
 </html>
@@ -273,4 +402,5 @@ async def start_bot():
 async def startup():
     await init_db()
     asyncio.create_task(start_bot())
+
 

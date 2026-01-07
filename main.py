@@ -496,7 +496,7 @@ async def start(msg: types.Message):
         keyboard=[[
             KeyboardButton(
                 text="🚀 Open Code Studio",
-                web_app=WebAppInfo(url=APP_URL)
+                web_app=WebAppInfo(url=MINIAPP_URL)
             )
         ]],
         resize_keyboard=True
@@ -537,6 +537,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

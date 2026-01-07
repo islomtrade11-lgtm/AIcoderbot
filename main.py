@@ -100,6 +100,12 @@ async def call_llm(messages):
         return r.json()["choices"][0]["message"]["content"]
 
 # ======================= API ==========================
+from pydantic import BaseModel
+
+class SendProject(BaseModel):
+    user_id: int
+    title: str
+    code: str
 
 @app.post("/generate")
 async def generate(req: Generate):
@@ -143,7 +149,6 @@ from fastapi import HTTPException
 
 @app.post("/projects/send_to_chat")
 async def send_project_to_chat(p: SendProject):
-    # 🔒 ЖЁСТКАЯ ПРОВЕРКА
     if not p.user_id or p.user_id <= 0:
         raise HTTPException(
             status_code=400,
@@ -627,6 +632,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

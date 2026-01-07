@@ -1,4 +1,6 @@
 fastapi
 uvicorn
+aiogram
 httpx
 aiosqlite
+

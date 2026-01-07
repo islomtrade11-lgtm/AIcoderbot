@@ -148,14 +148,41 @@ class DeleteProject(BaseModel):
 
 @app.post("/generate")
 async def generate(req: Generate):
-    return {
-        "code": (
-            "# ✅ MOCK GENERATION WORKS\n\n"
-            "def hello():\n"
-            "    print('Hello from AI Coder')\n\n"
-            "hello()"
-        )
-    }
+    """
+    Generate code from user task.
+    Never returns empty response silently.
+    """
+    try:
+        # 1. Enhance user prompt
+        enhanced = await call_llm([
+            {"role": "system", "content": PROMPT_ENHANCER},
+            {"role": "user", "content": req.text}
+        ])
+
+        if not enhanced or not enhanced.strip():
+            return {
+                "error": "Prompt enhancement failed. Empty response from model."
+            }
+
+        # 2. Generate final code
+        code = await call_llm([
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": enhanced}
+        ])
+
+        if not code or not code.strip():
+            return {
+                "error": "Code generation failed. Model returned empty response."
+            }
+
+        return {"code": code}
+
+    except Exception as e:
+        # IMPORTANT: log error in Railway logs
+        print("❌ GENERATE ERROR:", repr(e))
+        return {
+            "error": "Internal generation error. Check server logs."
+        }
 
 @app.post("/projects/save")
 async def save_project(p: SaveProject):
@@ -556,6 +583,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

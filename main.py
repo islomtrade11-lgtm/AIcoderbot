@@ -561,9 +561,15 @@ async def telegram_webhook(request: Request):
     if secret != WEBHOOK_SECRET:
         raise HTTPException(status_code=403, detail="Invalid secret")
 
-    update = Update.model_validate(await request.json())
-    await dp.feed_update(bot, update)
+    data = await request.json()
+    update = Update.model_validate(data)
+
+    # 🚀 НЕ ЖДЁМ обработку — запускаем в фоне
+    asyncio.create_task(dp.feed_update(bot, update))
+
+    # ⚡ СРАЗУ отвечаем Telegram
     return {"ok": True}
+
 
 # ======================= STARTUP ======================
 
@@ -578,6 +584,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

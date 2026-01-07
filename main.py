@@ -89,56 +89,130 @@ class DeleteProject(BaseModel):
 
 @app.post("/generate")
 async def generate(req: Generate):
-    enhanced = await call_llm([
-        {"role": "system", "content": PROMPT_ENHANCER},
-        {"role": "user", "content": req.text}
-    ])
+    """
+    Generate code from user task.
+    Never returns empty response silently.
+    """
+    try:
+        # 1. Enhance user prompt
+        enhanced = await call_llm([
+            {"role": "system", "content": PROMPT_ENHANCER},
+            {"role": "user", "content": req.text}
+        ])
 
-    code = await call_llm([
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": enhanced}
-    ])
-    return {"code": code}
+        if not enhanced or not enhanced.strip():
+            return {
+                "error": "Prompt enhancement failed. Empty response from model."
+            }
+
+        # 2. Generate final code
+        code = await call_llm([
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": enhanced}
+        ])
+
+        if not code or not code.strip():
+            return {
+                "error": "Code generation failed. Model returned empty response."
+            }
+
+        return {"code": code}
+
+    except Exception as e:
+        # IMPORTANT: log error in Railway logs
+        print("❌ GENERATE ERROR:", repr(e))
+        return {
+            "error": "Internal generation error. Check server logs."
+        }
+
 
 @app.post("/projects/save")
 async def save_project(p: SaveProject):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute(
-            "INSERT INTO projects (user_id, title, task, code) VALUES (?, ?, ?, ?)",
-            (p.user_id, p.title, p.task, p.code)
-        )
-        await db.commit()
-    return {"status": "ok"}
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(
+                """
+                INSERT INTO projects (user_id, title, task, code)
+                VALUES (?, ?, ?, ?)
+                """,
+                (p.user_id, p.title, p.task, p.code)
+            )
+            await db.commit()
+        return {"status": "ok"}
+
+    except Exception as e:
+        print("❌ SAVE PROJECT ERROR:", repr(e))
+        return {"error": "Failed to save project"}
+
 
 @app.get("/projects/list/{user_id}")
 async def list_projects(user_id: int):
-    async with aiosqlite.connect(DB_PATH) as db:
-        cur = await db.execute(
-            "SELECT id, title FROM projects WHERE user_id=? ORDER BY created_at DESC",
-            (user_id,)
-        )
-        rows = await cur.fetchall()
-    return [{"id": r[0], "title": r[1]} for r in rows]
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            cur = await db.execute(
+                """
+                SELECT id, title
+                FROM projects
+                WHERE user_id=?
+                ORDER BY created_at DESC
+                """,
+                (user_id,)
+            )
+            rows = await cur.fetchall()
+
+        return [{"id": r[0], "title": r[1]} for r in rows]
+
+    except Exception as e:
+        print("❌ LIST PROJECTS ERROR:", repr(e))
+        return []
+
 
 @app.get("/projects/{project_id}")
 async def get_project(project_id: int):
-    async with aiosqlite.connect(DB_PATH) as db:
-        cur = await db.execute(
-            "SELECT title, task, code FROM projects WHERE id=?",
-            (project_id,)
-        )
-        r = await cur.fetchone()
-    return {"title": r[0], "task": r[1], "code": r[2]}
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            cur = await db.execute(
+                """
+                SELECT title, task, code
+                FROM projects
+                WHERE id=?
+                """,
+                (project_id,)
+            )
+            r = await cur.fetchone()
+
+        if not r:
+            return {"error": "Project not found"}
+
+        return {
+            "title": r[0],
+            "task": r[1],
+            "code": r[2]
+        }
+
+    except Exception as e:
+        print("❌ GET PROJECT ERROR:", repr(e))
+        return {"error": "Failed to load project"}
+
 
 @app.post("/projects/delete")
 async def delete_project(p: DeleteProject):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute(
-            "DELETE FROM projects WHERE id=? AND user_id=?",
-            (p.project_id, p.user_id)
-        )
-        await db.commit()
-    return {"status": "deleted"}
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(
+                """
+                DELETE FROM projects
+                WHERE id=? AND user_id=?
+                """,
+                (p.project_id, p.user_id)
+            )
+            await db.commit()
+
+        return {"status": "deleted"}
+
+    except Exception as e:
+        print("❌ DELETE PROJECT ERROR:", repr(e))
+        return {"error": "Failed to delete project"}
 
 # ======================= MINI APP =====================
 
@@ -407,6 +481,7 @@ async def start_bot():
 async def startup():
     await init_db()
     asyncio.create_task(start_bot())
+
 
 
 

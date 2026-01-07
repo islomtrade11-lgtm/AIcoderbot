@@ -151,135 +151,122 @@ async def mini_app():
 <meta charset="UTF-8">
 
 <meta name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
-<title>AI Code Studio</title>
+<title>AI Coder</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
 :root {
   --bg: #0b0f14;
   --panel: #0f172a;
-  --panel-2: #111827;
+  --panel2: #111827;
   --border: #1f2937;
   --text: #e5e7eb;
   --muted: #9ca3af;
   --accent: #6366f1;
-  --accent-hover: #4f46e5;
-}
-
-* {
-  box-sizing: border-box;
 }
 
 html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  overflow: hidden;
   background: var(--bg);
   color: var(--text);
   font-family: Inter, system-ui, sans-serif;
+  overflow: hidden;
 }
 
-/* ---------- LAYOUT ---------- */
+/* -------- APP -------- */
 .app {
-  display: grid;
-  grid-template-columns: 260px 1fr;
-  grid-template-rows: 1fr auto;
   height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-/* ---------- PROJECTS ---------- */
-#projects {
-  grid-row: 1 / 3;
+/* -------- TABS -------- */
+.tabs {
+  display: flex;
   background: var(--panel);
-  border-right: 1px solid var(--border);
-  padding: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 14px 0;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.tab.active {
+  color: white;
+  border-bottom: 2px solid var(--accent);
+}
+
+/* -------- VIEWS -------- */
+.view {
+  flex: 1;
+  display: none;
+  padding: 16px;
   overflow-y: auto;
 }
 
-#projects h3 {
-  margin: 0 0 12px;
-  font-size: 13px;
-  color: var(--muted);
-  text-transform: uppercase;
+.view.active {
+  display: block;
 }
 
+/* -------- PROJECTS -------- */
 .project {
-  padding: 10px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  margin-bottom: 6px;
-  background: transparent;
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--panel);
+  margin-bottom: 10px;
 }
 
-.project:hover {
-  background: var(--panel-2);
-}
-
-/* ---------- TASK + CODE ---------- */
-#task-panel {
-  display: grid;
-  grid-template-rows: 160px 1fr;
-  background: var(--panel-2);
-}
-
+/* -------- TEXTAREA -------- */
 textarea {
   width: 100%;
+  height: 200px;
+  background: var(--panel2);
+  color: var(--text);
   border: none;
-  outline: none;
-  resize: none;
+  border-radius: 12px;
   padding: 14px;
   font-size: 15px;
-  background: #020617;
-  color: var(--text);
+  resize: none;
 }
 
+/* -------- CODE -------- */
 pre {
-  margin: 0;
+  background: #020617;
+  border-radius: 12px;
   padding: 14px;
-  background: #000;
-  overflow: auto;
   font-size: 13px;
   line-height: 1.5;
+  min-height: 300px;
 }
 
-/* ---------- CONTROLS ---------- */
-.controls {
-  display: flex;
-  gap: 14px;
-  padding: 14px;
-  background: var(--panel);
-  border-top: 1px solid var(--border);
-}
-
+/* -------- BUTTONS -------- */
 button {
-  flex: 1;
-  padding: 14px;
-  font-size: 15px;
-  font-weight: 600;
-  border-radius: 10px;
+  width: 100%;
+  padding: 16px;
+  font-size: 16px;
+  border-radius: 14px;
   border: none;
-  cursor: pointer;
+  margin-bottom: 12px;
+  font-weight: 600;
 }
 
-button.primary {
+.primary {
   background: var(--accent);
   color: white;
 }
 
-button.primary:hover {
-  background: var(--accent-hover);
-}
-
-button.secondary {
-  background: #1f2937;
+.secondary {
+  background: var(--panel);
   color: var(--text);
-}
-
-button.secondary:hover {
-  background: #273449;
 }
 </style>
 </head>
@@ -287,23 +274,33 @@ button.secondary:hover {
 <body>
 <div class="app">
 
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" onclick="show('projects')">Projects</div>
+    <div class="tab" onclick="show('task')">Task</div>
+    <div class="tab" onclick="show('code')">Code</div>
+    <div class="tab" onclick="show('actions')">Actions</div>
+  </div>
+
   <!-- PROJECTS -->
-  <div id="projects">
-    <h3>Projects</h3>
+  <div id="projects" class="view active"></div>
+
+  <!-- TASK -->
+  <div id="task" class="view">
+    <textarea id="taskText"
+      placeholder="Describe what you want to build..."></textarea>
   </div>
 
-  <!-- TASK + CODE -->
-  <div id="task-panel">
-    <textarea id="task"
-      placeholder="Describe what you want to build...&#10;Example: FastAPI CRUD with JWT auth"></textarea>
-    <pre id="code"></pre>
+  <!-- CODE -->
+  <div id="code" class="view">
+    <pre id="codeText"></pre>
   </div>
 
-  <!-- CONTROLS -->
-  <div class="controls">
+  <!-- ACTIONS -->
+  <div id="actions" class="view">
     <button class="primary" onclick="generate()">Generate</button>
-    <button class="secondary" onclick="saveProject()">Save</button>
-    <button class="secondary" onclick="deleteProject()">Delete</button>
+    <button class="secondary" onclick="saveProject()">Save Project</button>
+    <button class="secondary" onclick="deleteProject()">Delete Project</button>
   </div>
 
 </div>
@@ -313,15 +310,18 @@ const tg = window.Telegram.WebApp;
 tg.expand();
 
 let currentProject = null;
-const projectsEl = document.getElementById("projects");
-const task = document.getElementById("task");
-const code = document.getElementById("code");
+
+function show(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
 
 async function loadProjects() {
   const r = await fetch('/projects/list/' + tg.initDataUnsafe.user.id);
   const data = await r.json();
-  projectsEl.innerHTML =
-    '<h3>Projects</h3>' +
+  document.getElementById("projects").innerHTML =
     data.map(p =>
       `<div class="project" onclick="openProject(${{p.id}})">📄 ${{p.title}}</div>`
     ).join('');
@@ -331,8 +331,9 @@ async function openProject(id) {
   currentProject = id;
   const r = await fetch('/projects/' + id);
   const p = await r.json();
-  task.value = p.task;
-  code.textContent = p.code;
+  taskText.value = p.task;
+  codeText.textContent = p.code;
+  show('task');
 }
 
 async function generate() {
@@ -341,10 +342,11 @@ async function generate() {
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
       user_id: tg.initDataUnsafe.user.id,
-      text: task.value
+      text: taskText.value
     })
   });
-  code.textContent = (await r.json()).code;
+  codeText.textContent = (await r.json()).code;
+  show('code');
 }
 
 async function saveProject() {
@@ -353,9 +355,9 @@ async function saveProject() {
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
       user_id: tg.initDataUnsafe.user.id,
-      title: task.value.slice(0, 40) || 'Untitled project',
-      task: task.value,
-      code: code.textContent
+      title: taskText.value.slice(0,40) || 'Untitled',
+      task: taskText.value,
+      code: codeText.textContent
     })
   });
   loadProjects();
@@ -371,9 +373,10 @@ async function deleteProject() {
       project_id: currentProject
     })
   });
-  task.value = '';
-  code.textContent = '';
+  taskText.value = '';
+  codeText.textContent = '';
   loadProjects();
+  show('projects');
 }
 
 loadProjects();
@@ -410,6 +413,7 @@ async def start_bot():
 async def startup():
     await init_db()
     asyncio.create_task(start_bot())
+
 
 
 

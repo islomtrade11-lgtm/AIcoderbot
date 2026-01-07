@@ -373,6 +373,12 @@ const tg = window.Telegram.WebApp;
 tg.expand();
 tg.ready();
 
+const USER_ID =
+  tg?.initDataUnsafe?.user?.id ||
+  tg?.initDataUnsafe?.user_id ||
+  0; // fallback для браузера
+
+
 const API = location.origin;
 
 let currentProject = null;
@@ -382,7 +388,7 @@ const taskText = document.getElementById("taskText");
 const codeText = document.getElementById("codeText");
 
 async function loadProjects(){
-  const r = await fetch(API + '/projects/list/' + tg.initDataUnsafe.user.id);
+  const r = await fetch(API + '/projects/list/' + user_id: USER_ID);
   const data = await r.json();
 
   select.innerHTML =
@@ -414,7 +420,7 @@ document.getElementById("btnGenerate").addEventListener("click", async () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        user_id: tg.initDataUnsafe.user.id,
+        user_id: USER_ID,
         text: taskText.value
       })
     });
@@ -447,7 +453,7 @@ document.getElementById("btnSave").addEventListener("click", async () => {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
-      user_id: tg.initDataUnsafe.user.id,
+      user_id: USER_ID,
       title: taskText.value.slice(0,40) || 'Untitled',
       task: taskText.value,
       code: codeText.textContent
@@ -463,7 +469,7 @@ document.getElementById("btnDelete").addEventListener("click", async () => {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
-      user_id: tg.initDataUnsafe.user.id,
+      user_id: USER_ID,
       project_id: currentProject
     })
   });
@@ -536,6 +542,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

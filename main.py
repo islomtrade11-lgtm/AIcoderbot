@@ -3,6 +3,10 @@ import asyncio
 import aiosqlite
 import httpx
 
+from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.types import Update
+from fastapi import Request, HTTPException
+
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -544,12 +548,35 @@ async def start(msg: types.Message):
     )
 
 async def start_bot():
-    await dp.start_polling(bot)
+
 
 @app.on_event("startup")
 async def startup():
     await init_db()
     asyncio.create_task(start_bot())
+
+@app.post("/webhook")
+async def telegram_webhook(request: Request):
+    secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
+    if secret != WEBHOOK_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    update = Update.model_validate(await request.json())
+    await dp.feed_update(bot, update)
+    return {"ok": True}
+
+@app.on_event("startup")
+async def on_startup():
+    await init_db()  # если у тебя уже есть — оставь
+
+    await bot.set_webhook(
+        url=f"{APP_URL}/webhook",
+        secret_token=WEBHOOK_SECRET,
+        drop_pending_updates=True
+    )
+
+    print("✅ Webhook enabled")
+
 
 
 

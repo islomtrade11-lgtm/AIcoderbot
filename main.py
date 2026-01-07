@@ -139,16 +139,17 @@ async def save_project(p: SaveProject):
         
 from aiogram.types import BufferedInputFile
 from aiogram.exceptions import TelegramBadRequest
-from pydantic import BaseModel
-
-class SendProject(BaseModel):
-    user_id: int
-    title: str
-    code: str
-
+from fastapi import HTTPException
 
 @app.post("/projects/send_to_chat")
 async def send_project_to_chat(p: SendProject):
+    # 🔒 ЖЁСТКАЯ ПРОВЕРКА
+    if not p.user_id or p.user_id <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid user_id. Open Mini App from Telegram bot."
+        )
+
     async def _send():
         try:
             document = BufferedInputFile(
@@ -163,8 +164,7 @@ async def send_project_to_chat(p: SendProject):
             )
 
         except TelegramBadRequest as e:
-            # пользователь не нажал /start
-            print(f"⚠️ chat not found for user {p.user_id}: {e}")
+            print(f"⚠️ Telegram error for user {p.user_id}: {e}")
 
         except Exception as e:
             print(f"❌ send_to_chat error: {e}")
@@ -453,11 +453,8 @@ pre{
 
 </div>
 
-<!-- ЭТОТ HTML = ТВОЙ, ВЕСЬ, БЕЗ СОКРАЩЕНИЙ -->
-<!-- Я МЕНЯЛ ТОЛЬКО JS НИЖЕ -->
-
 <script>
-let USER_ID = 0;
+let USER_ID = null;
 
 if (window.Telegram && window.Telegram.WebApp) {
   const tg = window.Telegram.WebApp;
@@ -469,27 +466,16 @@ if (window.Telegram && window.Telegram.WebApp) {
   }
 }
 
-const API = location.origin;
-
-const select = document.getElementById("projectSelect");
-const taskText = document.getElementById("taskText");
-const codeText = document.getElementById("codeText");
-
-const btnGenerate = document.getElementById("btnGenerate");
-const btnSave = document.getElementById("btnSave");
-const btnDelete = document.getElementById("btnDelete");
-const btnSend = document.getElementById("btnSend");
-
-let currentProject = null;
-
-function renderEmptySelect() {
-  select.innerHTML = '<option value="">➕ New project</option>';
+// ⛔ ЕСЛИ НЕ ИЗ TELEGRAM — БЛОКИРУЕМ
+if (!USER_ID) {
+  document.body.innerHTML = `
+    <div style="padding:20px;color:white;font-family:sans-serif">
+      ❌ This app must be opened from Telegram bot.<br><br>
+      👉 Go back to Telegram and press <b>Start</b>.
+    </div>
+  `;
+  throw new Error("Mini App opened outside Telegram");
 }
-
-async function loadProjects() {
-  renderEmptySelect();
-
-  if (!USER_ID) return;
 
   const r = await fetch(API + "/projects/list/" + USER_ID);
   const data = await r.json();
@@ -641,6 +627,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

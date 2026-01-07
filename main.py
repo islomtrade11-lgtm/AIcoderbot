@@ -149,15 +149,19 @@ async def mini_app():
 <html>
 <head>
 <meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
 <title>AI Code Studio</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
 :root {
   --bg: #0b0f14;
-  --panel: #111827;
-  --panel-light: #1f2937;
-  --border: #2a3441;
+  --panel: #0f172a;
+  --panel-2: #111827;
+  --border: #1f2937;
   --text: #e5e7eb;
   --muted: #9ca3af;
   --accent: #6366f1;
@@ -168,33 +172,38 @@ async def mini_app():
   box-sizing: border-box;
 }
 
-body {
+html, body {
   margin: 0;
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
   background: var(--bg);
   color: var(--text);
+  font-family: Inter, system-ui, sans-serif;
 }
 
+/* ---------- LAYOUT ---------- */
 .app {
-  display: flex;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  grid-template-rows: 1fr auto;
   height: 100vh;
 }
 
-/* ---------- SIDEBAR ---------- */
+/* ---------- PROJECTS ---------- */
 #projects {
-  width: 260px;
+  grid-row: 1 / 3;
   background: var(--panel);
   border-right: 1px solid var(--border);
-  padding: 16px;
+  padding: 14px;
   overflow-y: auto;
 }
 
 #projects h3 {
   margin: 0 0 12px;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: .05em;
 }
 
 .project {
@@ -206,38 +215,31 @@ body {
 }
 
 .project:hover {
-  background: var(--panel-light);
+  background: var(--panel-2);
 }
 
-/* ---------- MAIN ---------- */
-#main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-/* ---------- EDITORS ---------- */
-.editors {
-  flex: 1;
-  display: flex;
+/* ---------- TASK + CODE ---------- */
+#task-panel {
+  display: grid;
+  grid-template-rows: 160px 1fr;
+  background: var(--panel-2);
 }
 
 textarea {
-  width: 50%;
-  padding: 16px;
-  background: #0f172a;
+  width: 100%;
   border: none;
   outline: none;
-  color: var(--text);
-  font-size: 14px;
   resize: none;
+  padding: 14px;
+  font-size: 15px;
+  background: #020617;
+  color: var(--text);
 }
 
 pre {
-  width: 50%;
   margin: 0;
-  padding: 16px;
-  background: #020617;
+  padding: 14px;
+  background: #000;
   overflow: auto;
   font-size: 13px;
   line-height: 1.5;
@@ -246,32 +248,37 @@ pre {
 /* ---------- CONTROLS ---------- */
 .controls {
   display: flex;
-  gap: 10px;
-  padding: 12px 16px;
-  border-top: 1px solid var(--border);
+  gap: 14px;
+  padding: 14px;
   background: var(--panel);
+  border-top: 1px solid var(--border);
 }
 
 button {
-  padding: 8px 14px;
-  background: var(--panel-light);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  flex: 1;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: none;
   cursor: pointer;
-  font-size: 14px;
 }
 
 button.primary {
   background: var(--accent);
-  border-color: var(--accent);
+  color: white;
 }
 
 button.primary:hover {
   background: var(--accent-hover);
 }
 
-button:hover {
+button.secondary {
+  background: #1f2937;
+  color: var(--text);
+}
+
+button.secondary:hover {
   background: #273449;
 }
 </style>
@@ -280,23 +287,23 @@ button:hover {
 <body>
 <div class="app">
 
-  <!-- SIDEBAR -->
+  <!-- PROJECTS -->
   <div id="projects">
     <h3>Projects</h3>
   </div>
 
-  <!-- MAIN -->
-  <div id="main">
-    <div class="editors">
-      <textarea id="task" placeholder="Describe what you want to build..."></textarea>
-      <pre id="code"></pre>
-    </div>
+  <!-- TASK + CODE -->
+  <div id="task-panel">
+    <textarea id="task"
+      placeholder="Describe what you want to build...&#10;Example: FastAPI CRUD with JWT auth"></textarea>
+    <pre id="code"></pre>
+  </div>
 
-    <div class="controls">
-      <button class="primary" onclick="generate()">Generate</button>
-      <button onclick="saveProject()">Save</button>
-      <button onclick="deleteProject()">Delete</button>
-    </div>
+  <!-- CONTROLS -->
+  <div class="controls">
+    <button class="primary" onclick="generate()">Generate</button>
+    <button class="secondary" onclick="saveProject()">Save</button>
+    <button class="secondary" onclick="deleteProject()">Delete</button>
   </div>
 
 </div>
@@ -313,7 +320,8 @@ const code = document.getElementById("code");
 async function loadProjects() {
   const r = await fetch('/projects/list/' + tg.initDataUnsafe.user.id);
   const data = await r.json();
-  projectsEl.innerHTML = '<h3>Projects</h3>' +
+  projectsEl.innerHTML =
+    '<h3>Projects</h3>' +
     data.map(p =>
       `<div class="project" onclick="openProject(${{p.id}})">📄 ${{p.title}}</div>`
     ).join('');
@@ -402,5 +410,6 @@ async def start_bot():
 async def startup():
     await init_db()
     asyncio.create_task(start_bot())
+
 
 

@@ -145,22 +145,23 @@ class SendProject(BaseModel):
     title: str
     code: str
 
+
 @app.post("/projects/send_to_chat")
 async def send_project_to_chat(p: SendProject):
-    file_bytes = p.code.encode("utf-8")
+    async def _send():
+        document = BufferedInputFile(
+            p.code.encode("utf-8"),
+            filename=f"{p.title or 'project'}.py"
+        )
 
-    document = BufferedInputFile(
-        file=file_bytes,
-        filename=f"{p.title or 'project'}.py"
-    )
+        await bot.send_document(
+            chat_id=p.user_id,
+            document=document,
+            caption=f"📦 {p.title}"
+        )
 
-    await bot.send_document(
-        chat_id=p.user_id,
-        document=document,
-        caption=f"📦 {p.title}"
-    )
-
-    return {"status": "sent"}
+    asyncio.create_task(_send())
+    return {"status": "queued"}
 
 
 @app.get("/projects/list/{user_id}")
@@ -437,7 +438,6 @@ pre{
   <div class="row">
     <button type="button" class="btn success" id="btnSave">💾 Save</button>
     <button type="button" class="btn danger" id="btnDelete">🗑 Delete</button>
-    <button type="button" class="btn success" id="btnTests">🧪 Run tests</button>
     <button type="button" class="btn primary" id="btnSend">📤 Send to chat</button>
   </div>
 </div>
@@ -467,15 +467,9 @@ const codeText = document.getElementById("codeText");
 const btnGenerate = document.getElementById("btnGenerate");
 const btnSave = document.getElementById("btnSave");
 const btnDelete = document.getElementById("btnDelete");
-const btnTests = document.getElementById("btnTests");
 const btnSend = document.getElementById("btnSend");
 
 let currentProject = null;
-
-/* ===== GUARD ===== */
-if (!btnGenerate) {
-  alert("btnGenerate NOT FOUND");
-}
 
 /* ===== LOAD PROJECTS ===== */
 async function loadProjects() {
@@ -508,23 +502,17 @@ select.addEventListener("change", async () => {
 btnGenerate.addEventListener("click", async () => {
   codeText.textContent = "⏳ Generating code...";
 
-  try {
-    const r = await fetch(API + "/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        user_id: USER_ID,
-        text: taskText.value
-      })
-    });
+  const r = await fetch(API + "/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: USER_ID,
+      text: taskText.value
+    })
+  });
 
-    const raw = await r.text();
-    const data = JSON.parse(raw);
-
-    codeText.textContent = data.code || "❌ Empty response";
-  } catch (e) {
-    codeText.textContent = "❌ " + e.message;
-  }
+  const data = await r.json();
+  codeText.textContent = data.code || "❌ Empty response";
 });
 
 /* ===== SAVE ===== */
@@ -558,21 +546,6 @@ btnDelete.addEventListener("click", async () => {
   taskText.value = "";
   codeText.textContent = "";
   loadProjects();
-});
-
-/* ===== TESTS ===== */
-btnTests.addEventListener("click", async () => {
-  codeText.textContent = "🧪 Running tests...";
-
-  const r = await fetch(API + "/tests/run", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code: codeText.textContent })
-  });
-
-  const data = await r.json();
-  codeText.textContent =
-    (data.ok ? "✅ Tests passed\n\n" : "❌ Tests failed\n\n") + data.output;
 });
 
 /* ===== SEND TO CHAT ===== */
@@ -654,6 +627,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

@@ -433,12 +433,12 @@ pre{
 
 <!-- ACTIONS -->
 <div class="card">
-  <button class="btn primary" id="btnGenerate">⚡ Generate code</button>
+  <button type="button" class="btn primary" id="btnGenerate">⚡ Generate code</button>
   <div class="row">
-    <button class="btn success" id="btnSave">💾 Save</button>
-    <button class="btn danger" id="btnDelete">🗑 Delete</button>
-    <button class="btn success" id="btnTests">🧪 Run tests</button>
-    <button class="btn primary" id="btnSend">📤 Send to chat</button>
+    <button type="button" class="btn success" id="btnSave">💾 Save</button>
+    <button type="button" class="btn danger" id="btnDelete">🗑 Delete</button>
+    <button type="button" class="btn success" id="btnTests">🧪 Run tests</button>
+    <button type="button" class="btn primary" id="btnSend">📤 Send to chat</button>
   </div>
 </div>
 
@@ -656,6 +656,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

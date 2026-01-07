@@ -87,7 +87,7 @@ async def call_llm(messages):
                 "Content-Type": "application/json",
             },
             json={
-                "model": "llama-3.3-70b",
+                "model": "llama-3.3-70b-versatile",
                 "messages": messages,
                 "temperature": 0.2,
                 "max_tokens": 2000,
@@ -541,6 +541,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

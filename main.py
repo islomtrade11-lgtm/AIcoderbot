@@ -618,17 +618,31 @@ dp = Dispatcher()
 @dp.message()
 async def start(msg: types.Message):
     kb = ReplyKeyboardMarkup(
-        keyboard=[[
-            KeyboardButton(
-                text="🚀 Open Code Studio",
-                web_app=WebAppInfo(url=MINIAPP_URL)
-            )
-        ]],
+        keyboard=[
+            [KeyboardButton(text="🚀 Открыть Code Studio")],
+        ],
         resize_keyboard=True
     )
+
     await msg.answer(
-        "💻 AI Code Studio\n\nJust open and start coding.",
+        "💻 AI Code Studio\n\n"
+        "Нажми кнопку ниже, затем открой Mini App.",
         reply_markup=kb
+    )
+    
+@dp.message(lambda m: m.text == "🚀 Открыть Code Studio")
+async def open_app(msg: types.Message):
+    await msg.answer(
+        "👇 Открывай редактор:",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[[
+                KeyboardButton(
+                    text="📂 Open Mini App",
+                    web_app=WebAppInfo(url=MINIAPP_URL)
+                )
+            ]],
+            resize_keyboard=True
+        )
     )
 
 # ======================= WEBHOOK ======================
@@ -662,6 +676,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

@@ -15,9 +15,10 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 
 # ======================= CONFIG =======================
-BOT_TOKEN = os.getenv("BOT_TOKEN")                 # BotFather
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+APP_URL = os.getenv("APP_URL")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-APP_URL = os.getenv("APP_URL")                     # https://xxx.up.railway.app
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET")
 
 MODEL = "deepseek/deepseek-coder:instruct"
 DB_PATH = "db.sqlite"
@@ -577,6 +578,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

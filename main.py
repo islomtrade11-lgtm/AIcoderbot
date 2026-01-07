@@ -53,51 +53,75 @@ async def init_db():
 # ======================= LLM ==========================
 
 async def call_llm(messages):
-    async with httpx.AsyncClient(timeout=120) as client:
+    """
+    Safe OpenRouter LLM call.
+    Always returns string or raises Exception.
+    """
+
+    if not OPENROUTER_API_KEY:
+        raise RuntimeError("OPENROUTER_API_KEY is not set")
+
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(
+            connect=10.0,
+            read=30.0,
+            write=10.0,
+            pool=10.0
+        )
+    ) as client:
         try:
-            r = await client.post(
+            response = await client.post(
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers={
                     "Authorization": f"Bearer {OPENROUTER_API_KEY}",
                     "Content-Type": "application/json",
+                    "HTTP-Referer": "https://telegram-ai-coder",  # required by OpenRouter
+                    "X-Title": "Telegram AI Code Studio"
                 },
                 json={
                     "model": MODEL,
                     "messages": messages,
                     "temperature": 0.2,
-                    "max_tokens": 3000,
+                    "max_tokens": 1500
                 }
             )
 
-            # 🔴 LOG FULL RESPONSE
-            print("🔵 OpenRouter status:", r.status_code)
-            print("🔵 OpenRouter raw:", r.text)
+            print("🔵 OpenRouter HTTP:", response.status_code)
+            print("🔵 OpenRouter RAW:", response.text)
 
-            data = r.json()
+            if response.status_code != 200:
+                raise RuntimeError(
+                    f"OpenRouter HTTP {response.status_code}: {response.text}"
+                )
 
-            # ❌ OpenRouter error
-            if "error" in data:
-                raise RuntimeError(data["error"])
+            data = response.json()
 
-            # ❌ No choices
-            if "choices" not in data or not data["choices"]:
-                raise RuntimeError("No choices in OpenRouter response")
+            # Explicit OpenRouter error
+            if isinstance(data, dict) and "error" in data:
+                raise RuntimeError(f"OpenRouter error: {data['error']}")
 
-            choice = data["choices"][0]
+            # Validate choices
+            choices = data.get("choices")
+            if not choices or not isinstance(choices, list):
+                raise RuntimeError("OpenRouter response has no choices")
 
-            # Normal response
-            if "message" in choice and "content" in choice["message"]:
-                return choice["message"]["content"]
+            first = choices[0]
 
-            # Streaming-like delta response
-            if "delta" in choice and "content" in choice["delta"]:
-                return choice["delta"]["content"]
+            # Normal chat completion
+            if "message" in first and first["message"].get("content"):
+                return first["message"]["content"]
 
-            raise RuntimeError("Unknown OpenRouter response format")
+            # Fallback / delta-like
+            if "delta" in first and first["delta"].get("content"):
+                return first["delta"]["content"]
+
+            raise RuntimeError(
+                f"Unexpected OpenRouter response format: {first}"
+            )
 
         except Exception as e:
-            print("❌ call_llm ERROR:", repr(e))
-            return None
+            print("❌ call_llm FAILED:", repr(e))
+            raise
 
 # ======================= API MODELS ===================
 
@@ -522,6 +546,7 @@ async def start_bot():
 async def startup():
     await init_db()
     asyncio.create_task(start_bot())
+
 
 
 

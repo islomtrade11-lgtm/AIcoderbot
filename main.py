@@ -434,6 +434,8 @@ const tg = window.Telegram.WebApp;
 tg.expand();
 tg.ready();
 
+const API = location.origin;
+
 let currentProject = null;
 
 const select = document.getElementById("projectSelect");
@@ -441,7 +443,7 @@ const taskText = document.getElementById("taskText");
 const codeText = document.getElementById("codeText");
 
 async function loadProjects(){
-  const r = await fetch('/projects/list/' + tg.initDataUnsafe.user.id);
+  const r = await fetch(API + '/projects/list/' + tg.initDataUnsafe.user.id);
   const data = await r.json();
 
   select.innerHTML =
@@ -458,7 +460,7 @@ select.addEventListener('change', async () => {
   }
 
   currentProject = select.value;
-  const r = await fetch('/projects/' + currentProject);
+  const r = await fetch(API + '/projects/' + currentProject);
   const p = await r.json();
 
   taskText.value = p.task;
@@ -468,7 +470,9 @@ select.addEventListener('change', async () => {
 document.getElementById("btnGenerate").addEventListener("click", async () => {
   codeText.textContent = "⏳ Generating code...";
 
-  const r = await fetch('/generate', {
+  console.log("SEND /generate");
+
+  const r = await fetch(API + '/generate', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
@@ -482,7 +486,7 @@ document.getElementById("btnGenerate").addEventListener("click", async () => {
 });
 
 document.getElementById("btnSave").addEventListener("click", async () => {
-  await fetch('/projects/save', {
+  await fetch(API + '/projects/save', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
@@ -498,7 +502,7 @@ document.getElementById("btnSave").addEventListener("click", async () => {
 document.getElementById("btnDelete").addEventListener("click", async () => {
   if (!currentProject) return;
 
-  await fetch('/projects/delete', {
+  await fetch(API + '/projects/delete', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
@@ -546,6 +550,7 @@ async def start_bot():
 async def startup():
     await init_db()
     asyncio.create_task(start_bot())
+
 
 
 

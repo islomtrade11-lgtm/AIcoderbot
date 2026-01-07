@@ -39,6 +39,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 APP_URL = os.getenv("APP_URL")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET")
+MINIAPP_URL = os.getenv("MINIAPP_URL")
 
 MODEL = "deepseek/deepseek-coder:instruct"
 DB_PATH = "db.sqlite"
@@ -537,6 +538,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

@@ -103,41 +103,21 @@ async def call_llm(messages):
 
 @app.post("/generate")
 async def generate(req: Generate):
-    """
-    Generate code from user task.
-    Never returns empty response silently.
-    """
     try:
-        # 1. Enhance user prompt
-        enhanced = await call_llm([
-            {"role": "system", "content": PROMPT_ENHANCER},
+        code = await call_llm([
+            {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": req.text}
         ])
 
-        if not enhanced or not enhanced.strip():
-            return {
-                "error": "Prompt enhancement failed. Empty response from model."
-            }
-
-        # 2. Generate final code
-        code = await call_llm([
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": enhanced}
-        ])
-
-        if not code or not code.strip():
-            return {
-                "error": "Code generation failed. Model returned empty response."
-            }
+        if not code:
+            return {"error": "Empty response from LLM"}
 
         return {"code": code}
 
     except Exception as e:
-        # IMPORTANT: log error in Railway logs
         print("❌ GENERATE ERROR:", repr(e))
-        return {
-            "error": "Internal generation error. Check server logs."
-        }
+        return {"error": str(e)}
+
 
 @app.post("/projects/save")
 async def save_project(p: SaveProject):
@@ -429,20 +409,38 @@ select.addEventListener('change', async () => {
 document.getElementById("btnGenerate").addEventListener("click", async () => {
   codeText.textContent = "⏳ Generating code...";
 
-  console.log("SEND /generate");
+  try {
+    const r = await fetch(API + "/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: tg.initDataUnsafe.user.id,
+        text: taskText.value
+      })
+    });
 
-  const r = await fetch(API + '/generate', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      user_id: tg.initDataUnsafe.user.id,
-      text: taskText.value
-    })
-  });
+    const raw = await r.text();
+    console.log("RAW RESPONSE:", raw);
 
-  const data = await r.json();
-  codeText.textContent = data.code || ("❌ " + data.error);
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      throw new Error("Server returned invalid JSON");
+    }
+
+    if (!r.ok) {
+      throw new Error(data.error || "Server error");
+    }
+
+    codeText.textContent = data.code || "❌ Empty response";
+
+  } catch (e) {
+    console.error(e);
+    codeText.textContent = "❌ " + e.message;
+  }
 });
+
 
 document.getElementById("btnSave").addEventListener("click", async () => {
   await fetch(API + '/projects/save', {
@@ -538,6 +536,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

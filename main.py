@@ -256,227 +256,42 @@ async def mini_app():
 <meta name="viewport"
 content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
-<title>AI Coder</title>
+<title>JS TEST</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
-:root{
- --bg:#0b0f14;
- --card:#111827;
- --border:#1f2937;
- --text:#e5e7eb;
- --muted:#9ca3af;
- --accent:#6366f1;
- --accent2:#22c55e;
- --danger:#ef4444;
+body {
+  margin:0;
+  background:#0b0f14;
+  color:white;
+  font-family:system-ui;
 }
-
-*{box-sizing:border-box}
-
-html,body{
- margin:0;
- height:100%;
- background:var(--bg);
- color:var(--text);
- font-family:Inter,system-ui,sans-serif;
-}
-
-.app{
- padding:14px;
- display:flex;
- flex-direction:column;
- gap:14px;
-}
-
-/* ---- cards ---- */
-.card{
- background:linear-gradient(180deg,#111827,#0b1220);
- border:1px solid var(--border);
- border-radius:18px;
- padding:16px;
-}
-
-/* ---- headers ---- */
-.h1{
- font-size:18px;
- font-weight:700;
- margin-bottom:6px;
-}
-.hint{
- color:var(--muted);
- font-size:13px;
- margin-bottom:10px;
-}
-
-/* ---- project selector ---- */
-select{
- width:100%;
- padding:14px;
- border-radius:14px;
- border:none;
- background:#020617;
- color:var(--text);
- font-size:15px;
-}
-
-/* ---- textarea ---- */
-textarea{
- width:100%;
- min-height:140px;
- border-radius:14px;
- border:none;
- background:#020617;
- color:var(--text);
- padding:14px;
- font-size:15px;
- resize:none;
-}
-
-/* ---- code ---- */
-pre{
- background:#020617;
- border-radius:14px;
- padding:14px;
- font-size:13px;
- line-height:1.5;
- min-height:160px;
- white-space:pre-wrap;
-}
-
-/* ---- buttons ---- */
-.btn{
- width:100%;
- padding:16px;
- border-radius:16px;
- border:none;
- font-size:16px;
- font-weight:700;
- margin-top:8px;
-}
-
-.primary{
- background:linear-gradient(90deg,var(--accent),#818cf8);
- color:white;
-}
-
-.success{
- background:linear-gradient(90deg,var(--accent2),#4ade80);
- color:black;
-}
-
-.danger{
- background:linear-gradient(90deg,var(--danger),#f87171);
- color:white;
-}
-
-.row{
- display:flex;
- gap:10px;
+button {
+  width:90%;
+  margin:40px auto;
+  display:block;
+  padding:20px;
+  font-size:18px;
 }
 </style>
 </head>
 
 <body>
-<div class="app">
+<h2 style="text-align:center">JS CLICK TEST</h2>
 
-<!-- PROJECT -->
-<div class="card">
-  <div class="h1">📁 Project</div>
-  <div class="hint">Choose existing or create new</div>
-  <select id="projectSelect"></select>
-</div>
-
-<!-- TASK -->
-<div class="card">
-  <div class="h1">✍️ Task</div>
-  <div class="hint">Describe what you want to build</div>
-  <textarea id="taskText"
-    placeholder="Example: FastAPI CRUD with JWT auth"></textarea>
-</div>
-
-<!-- CODE -->
-<div class="card">
-  <div class="h1">💻 Code</div>
-  <div class="hint">Generated result will appear here</div>
-  <pre id="codeText">// waiting for generation…</pre>
-</div>
-
-<!-- ACTIONS -->
-<div class="card">
-  <button class="btn primary" id="btnGenerate">⚡ Generate code</button>
-  <div class="row">
-    <button class="btn success" id="btnSave">💾 Save</button>
-    <button class="btn danger" id="btnDelete">🗑 Delete</button>
-  </div>
-</div>
-
-</div>
+<button id="testBtn">CLICK ME</button>
 
 <script>
 const tg = window.Telegram.WebApp;
-tg.expand(); tg.ready();
+tg.expand();
+tg.ready();
 
-let currentProject = null;
-const select = document.getElementById("projectSelect");
+console.log("JS LOADED");
 
-async function loadProjects(){
- const r = await fetch('/projects/list/' + tg.initDataUnsafe.user.id);
- const data = await r.json();
- select.innerHTML =
-   '<option value="">➕ New project</option>' +
-   data.map(p=>`<option value="${{p.id}}">${{p.title}}</option>`).join('');
-}
-
-select.addEventListener('change', async ()=>{
- if(!select.value){ currentProject=null; return; }
- currentProject = select.value;
- const r = await fetch('/projects/' + currentProject);
- const p = await r.json();
- taskText.value = p.task;
- codeText.textContent = p.code;
+document.getElementById("testBtn").addEventListener("click", () => {
+  alert("BUTTON WORKS");
+  console.log("BUTTON CLICKED");
 });
-
-document.getElementById("btnGenerate").onclick = async ()=>{
- const r = await fetch('/generate',{
-  method:'POST',
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({
-   user_id: tg.initDataUnsafe.user.id,
-   text: taskText.value
-  })
- });
- codeText.textContent = (await r.json()).code;
-};
-
-document.getElementById("btnSave").onclick = async ()=>{
- await fetch('/projects/save',{
-  method:'POST',
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({
-   user_id: tg.initDataUnsafe.user.id,
-   title: taskText.value.slice(0,40)||'Untitled',
-   task: taskText.value,
-   code: codeText.textContent
-  })
- });
- loadProjects();
-};
-
-document.getElementById("btnDelete").onclick = async ()=>{
- if(!currentProject) return;
- await fetch('/projects/delete',{
-  method:'POST',
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({
-   user_id: tg.initDataUnsafe.user.id,
-   project_id: currentProject
-  })
- });
- taskText.value=''; codeText.textContent='';
- loadProjects();
-};
-
-loadProjects();
 </script>
 </body>
 </html>
@@ -511,6 +326,7 @@ async def start_bot():
 async def startup():
     await init_db()
     asyncio.create_task(start_bot())
+
 
 
 

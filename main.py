@@ -369,50 +369,35 @@ pre{
 </div>
 
 <script>
-const tg = window.Telegram.WebApp;
-tg.expand();
-tg.ready();
+alert("JS START");
+
+const tg = window.Telegram?.WebApp;
+if (tg) {
+  tg.expand();
+  tg.ready();
+}
 
 const USER_ID =
   tg?.initDataUnsafe?.user?.id ||
   tg?.initDataUnsafe?.user_id ||
-  0; // fallback для браузера
+  0;
 
+alert("USER_ID = " + USER_ID);
 
 const API = location.origin;
-
-let currentProject = null;
 
 const select = document.getElementById("projectSelect");
 const taskText = document.getElementById("taskText");
 const codeText = document.getElementById("codeText");
+const btnGenerate = document.getElementById("btnGenerate");
 
-async function loadProjects(){
-  const r = await fetch(API + '/projects/list/' + user_id: USER_ID);
-  const data = await r.json();
-
-  select.innerHTML =
-    '<option value="">➕ New project</option>' +
-    data.map(p =>
-      `<option value="${p.id}">${p.title}</option>`
-    ).join('');
+if (!btnGenerate) {
+  alert("❌ btnGenerate NOT FOUND");
 }
 
-select.addEventListener('change', async () => {
-  if (!select.value) {
-    currentProject = null;
-    return;
-  }
+btnGenerate?.addEventListener("click", async () => {
+  alert("🔥 CLICK");
 
-  currentProject = select.value;
-  const r = await fetch(API + '/projects/' + currentProject);
-  const p = await r.json();
-
-  taskText.value = p.task;
-  codeText.textContent = p.code;
-});
-
-document.getElementById("btnGenerate").addEventListener("click", async () => {
   codeText.textContent = "⏳ Generating code...";
 
   try {
@@ -426,60 +411,21 @@ document.getElementById("btnGenerate").addEventListener("click", async () => {
     });
 
     const raw = await r.text();
-    console.log("RAW RESPONSE:", raw);
+    alert("RESPONSE: " + raw.slice(0, 200));
 
     let data;
     try {
       data = JSON.parse(raw);
     } catch {
-      throw new Error("Server returned invalid JSON");
+      throw new Error("Invalid JSON");
     }
 
-    if (!r.ok) {
-      throw new Error(data.error || "Server error");
-    }
-
-    codeText.textContent = data.code || "❌ Empty response";
+    codeText.textContent = data.code || "❌ empty";
 
   } catch (e) {
-    console.error(e);
-    codeText.textContent = "❌ " + e.message;
+    alert("ERROR: " + e.message);
   }
 });
-
-
-document.getElementById("btnSave").addEventListener("click", async () => {
-  await fetch(API + '/projects/save', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      user_id: USER_ID,
-      title: taskText.value.slice(0,40) || 'Untitled',
-      task: taskText.value,
-      code: codeText.textContent
-    })
-  });
-  loadProjects();
-});
-
-document.getElementById("btnDelete").addEventListener("click", async () => {
-  if (!currentProject) return;
-
-  await fetch(API + '/projects/delete', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      user_id: USER_ID,
-      project_id: currentProject
-    })
-  });
-
-  taskText.value = '';
-  codeText.textContent = '';
-  loadProjects();
-});
-
-loadProjects();
 </script>
 </body>
 </html>
@@ -542,6 +488,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

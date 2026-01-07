@@ -16,9 +16,23 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 
 from pydantic import BaseModel
 
+from pydantic import BaseModel
+
 class Generate(BaseModel):
     user_id: int
     text: str
+
+
+class SaveProject(BaseModel):
+    user_id: int
+    title: str
+    task: str
+    code: str
+
+
+class DeleteProject(BaseModel):
+    user_id: int
+    project_id: int
 
 # ======================= CONFIG =======================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -523,6 +537,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

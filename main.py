@@ -53,21 +53,51 @@ async def init_db():
 # ======================= LLM ==========================
 
 async def call_llm(messages):
-    async with httpx.AsyncClient(timeout=90) as client:
-        r = await client.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "model": MODEL,
-                "messages": messages,
-                "temperature": 0.15,
-                "max_tokens": 3000
-            }
-        )
-        return r.json()["choices"][0]["message"]["content"]
+    async with httpx.AsyncClient(timeout=120) as client:
+        try:
+            r = await client.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": MODEL,
+                    "messages": messages,
+                    "temperature": 0.2,
+                    "max_tokens": 3000,
+                }
+            )
+
+            # 🔴 LOG FULL RESPONSE
+            print("🔵 OpenRouter status:", r.status_code)
+            print("🔵 OpenRouter raw:", r.text)
+
+            data = r.json()
+
+            # ❌ OpenRouter error
+            if "error" in data:
+                raise RuntimeError(data["error"])
+
+            # ❌ No choices
+            if "choices" not in data or not data["choices"]:
+                raise RuntimeError("No choices in OpenRouter response")
+
+            choice = data["choices"][0]
+
+            # Normal response
+            if "message" in choice and "content" in choice["message"]:
+                return choice["message"]["content"]
+
+            # Streaming-like delta response
+            if "delta" in choice and "content" in choice["delta"]:
+                return choice["delta"]["content"]
+
+            raise RuntimeError("Unknown OpenRouter response format")
+
+        except Exception as e:
+            print("❌ call_llm ERROR:", repr(e))
+            return None
 
 # ======================= API MODELS ===================
 
@@ -481,6 +511,7 @@ async def start_bot():
 async def startup():
     await init_db()
     asyncio.create_task(start_bot())
+
 
 
 

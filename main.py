@@ -528,7 +528,12 @@ loadProjects();
 
 # ======================= TELEGRAM BOT =================
 
-bot = Bot(token=BOT_TOKEN)
+from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.types import Update
+from fastapi import Request, HTTPException
+
+session = AiohttpSession(timeout=60)
+bot = Bot(token=BOT_TOKEN, session=session)
 dp = Dispatcher()
 
 @dp.message()
@@ -547,13 +552,7 @@ async def start(msg: types.Message):
         reply_markup=kb
     )
 
-async def start_bot():
-
-
-@app.on_event("startup")
-async def startup():
-    await init_db()
-    asyncio.create_task(start_bot())
+# ======================= WEBHOOK ======================
 
 @app.post("/webhook")
 async def telegram_webhook(request: Request):
@@ -565,9 +564,11 @@ async def telegram_webhook(request: Request):
     await dp.feed_update(bot, update)
     return {"ok": True}
 
+# ======================= STARTUP ======================
+
 @app.on_event("startup")
 async def on_startup():
-    await init_db()  # если у тебя уже есть — оставь
+    await init_db()
 
     await bot.set_webhook(
         url=f"{APP_URL}/webhook",
@@ -576,6 +577,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

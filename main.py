@@ -136,6 +136,31 @@ async def save_project(p: SaveProject):
     except Exception as e:
         print("❌ SAVE PROJECT ERROR:", repr(e))
         return {"error": "Failed to save project"}
+        
+from aiogram.types import BufferedInputFile
+from pydantic import BaseModel
+
+class SendProject(BaseModel):
+    user_id: int
+    title: str
+    code: str
+
+@app.post("/projects/send_to_chat")
+async def send_project_to_chat(p: SendProject):
+    file_bytes = p.code.encode("utf-8")
+
+    document = BufferedInputFile(
+        file=file_bytes,
+        filename=f"{p.title or 'project'}.py"
+    )
+
+    await bot.send_document(
+        chat_id=p.user_id,
+        document=document,
+        caption=f"📦 {p.title}"
+    )
+
+    return {"status": "sent"}
 
 
 @app.get("/projects/list/{user_id}")
@@ -535,30 +560,6 @@ document.getElementById("btnSave").addEventListener("click", async () => {
   loadProjects();
 });
 
-from aiogram.types import BufferedInputFile
-
-class SendProject(BaseModel):
-    user_id: int
-    title: str
-    code: str
-
-@app.post("/projects/send_to_chat")
-async def send_project_to_chat(p: SendProject):
-    file_bytes = p.code.encode("utf-8")
-
-    document = BufferedInputFile(
-        file=file_bytes,
-        filename=f"{p.title or 'project'}.py"
-    )
-
-    await bot.send_document(
-        chat_id=p.user_id,
-        document=document,
-        caption=f"📦 {p.title}"
-    )
-
-    return {"status": "sent"}
-
 // ===== SEND TO CHAT =====
 document.getElementById("btnSend").addEventListener("click", async () => {
   await fetch(API + "/projects/send_to_chat", {
@@ -655,6 +656,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

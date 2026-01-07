@@ -3,4 +3,5 @@ uvicorn
 aiogram
 httpx
 aiosqlite
+pytest
 

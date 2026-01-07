@@ -186,7 +186,10 @@ let currentProject=null;
 async function loadProjects(){{
   const r=await fetch('/projects/list/'+tg.initDataUnsafe.user.id);
   const data=await r.json();
-  projects.innerHTML=data.map(p=>`<div onclick="openProject(${p.id})">📄 ${p.title}</div>`).join('');
+projects.innerHTML = data.map(p =>
+  `<div onclick="openProject(${{p.id}})">📄 ${{p.title}}</div>`
+).join('');
+
 }}
 loadProjects();
 
@@ -270,3 +273,4 @@ async def start_bot():
 async def startup():
     await init_db()
     asyncio.create_task(start_bot())
+

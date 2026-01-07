@@ -615,34 +615,12 @@ session = AiohttpSession(timeout=60)
 bot = Bot(token=BOT_TOKEN, session=session)
 dp = Dispatcher()
 
-@dp.message()
+@dp.message(commands=["start"])
 async def start(msg: types.Message):
-    kb = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="🚀 Открыть Code Studio")],
-        ],
-        resize_keyboard=True
-    )
-
     await msg.answer(
         "💻 AI Code Studio\n\n"
-        "Нажми кнопку ниже, затем открой Mini App.",
-        reply_markup=kb
-    )
-    
-@dp.message(lambda m: m.text == "🚀 Открыть Code Studio")
-async def open_app(msg: types.Message):
-    await msg.answer(
-        "👇 Открывай редактор:",
-        reply_markup=ReplyKeyboardMarkup(
-            keyboard=[[
-                KeyboardButton(
-                    text="📂 Open Mini App",
-                    web_app=WebAppInfo(url=MINIAPP_URL)
-                )
-            ]],
-            resize_keyboard=True
-        )
+        "Нажми кнопку 🚀 *Запустить* внизу экрана, чтобы открыть редактор.",
+        parse_mode="Markdown"
     )
 
 # ======================= WEBHOOK ======================
@@ -664,6 +642,7 @@ async def telegram_webhook(request: Request):
 
 
 # ======================= STARTUP ======================
+from aiogram.types import MenuButtonWebApp
 
 @app.on_event("startup")
 async def on_startup():
@@ -675,7 +654,17 @@ async def on_startup():
         drop_pending_updates=True
     )
 
-    print("✅ Webhook enabled")
+    # 🔴 ВОТ ЭТО ДЕЛАЕТ КНОПКУ КАК НА СКРИНЕ
+    await bot.set_chat_menu_button(
+        menu_button=MenuButtonWebApp(
+            text="🚀 Запустить",
+            web_app=WebAppInfo(url=MINIAPP_URL)
+        )
+    )
+
+    print("✅ Webhook + Menu Button enabled")
+
+
 
 
 

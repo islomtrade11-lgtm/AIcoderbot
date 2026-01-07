@@ -149,7 +149,6 @@ async def mini_app():
 <html>
 <head>
 <meta charset="UTF-8">
-
 <meta name="viewport"
 content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
@@ -158,171 +157,227 @@ content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
 
 <style>
 :root{
- --bg:#0b0f14;--panel:#0f172a;--panel2:#111827;
- --border:#1f2937;--text:#e5e7eb;--muted:#9ca3af;
+ --bg:#0b0f14;
+ --card:#111827;
+ --border:#1f2937;
+ --text:#e5e7eb;
+ --muted:#9ca3af;
  --accent:#6366f1;
+ --accent2:#22c55e;
+ --danger:#ef4444;
 }
+
+*{box-sizing:border-box}
+
 html,body{
- margin:0;height:100%;background:var(--bg);
+ margin:0;
+ height:100%;
+ background:var(--bg);
+ color:var(--text);
  font-family:Inter,system-ui,sans-serif;
- color:var(--text);overflow:hidden
 }
-.app{height:100vh;display:flex;flex-direction:column}
 
-/* tabs */
-.tabs{display:flex;background:var(--panel);border-bottom:1px solid var(--border)}
-.tab{
- flex:1;padding:14px 0;text-align:center;
- color:var(--muted);font-size:14px
+.app{
+ padding:14px;
+ display:flex;
+ flex-direction:column;
+ gap:14px;
 }
-.tab.active{color:#fff;border-bottom:2px solid var(--accent)}
 
-/* views */
-.view{flex:1;display:none;padding:16px;overflow-y:auto}
-.view.active{display:block}
-
-/* ui */
+/* ---- cards ---- */
 .card{
- background:var(--panel);border-radius:14px;
- padding:18px;margin-bottom:14px
+ background:linear-gradient(180deg,#111827,#0b1220);
+ border:1px solid var(--border);
+ border-radius:18px;
+ padding:16px;
 }
+
+/* ---- headers ---- */
+.h1{
+ font-size:18px;
+ font-weight:700;
+ margin-bottom:6px;
+}
+.hint{
+ color:var(--muted);
+ font-size:13px;
+ margin-bottom:10px;
+}
+
+/* ---- project selector ---- */
+select{
+ width:100%;
+ padding:14px;
+ border-radius:14px;
+ border:none;
+ background:#020617;
+ color:var(--text);
+ font-size:15px;
+}
+
+/* ---- textarea ---- */
 textarea{
- width:100%;height:200px;background:var(--panel2);
- border:none;border-radius:12px;padding:14px;
- color:var(--text);font-size:15px;resize:none
+ width:100%;
+ min-height:140px;
+ border-radius:14px;
+ border:none;
+ background:#020617;
+ color:var(--text);
+ padding:14px;
+ font-size:15px;
+ resize:none;
 }
+
+/* ---- code ---- */
 pre{
- background:#020617;border-radius:12px;
- padding:14px;font-size:13px;min-height:250px
+ background:#020617;
+ border-radius:14px;
+ padding:14px;
+ font-size:13px;
+ line-height:1.5;
+ min-height:160px;
+ white-space:pre-wrap;
 }
-button{
- width:100%;padding:16px;border:none;
- border-radius:14px;font-size:16px;
- font-weight:600;margin-bottom:12px
+
+/* ---- buttons ---- */
+.btn{
+ width:100%;
+ padding:16px;
+ border-radius:16px;
+ border:none;
+ font-size:16px;
+ font-weight:700;
+ margin-top:8px;
 }
-.primary{background:var(--accent);color:#fff}
-.secondary{background:var(--panel);color:var(--text)}
+
+.primary{
+ background:linear-gradient(90deg,var(--accent),#818cf8);
+ color:white;
+}
+
+.success{
+ background:linear-gradient(90deg,var(--accent2),#4ade80);
+ color:black;
+}
+
+.danger{
+ background:linear-gradient(90deg,var(--danger),#f87171);
+ color:white;
+}
+
+.row{
+ display:flex;
+ gap:10px;
+}
 </style>
 </head>
 
 <body>
 <div class="app">
 
-<div class="tabs">
-  <div class="tab active" data-tab="projects">Projects</div>
-  <div class="tab" data-tab="task">Task</div>
-  <div class="tab" data-tab="code">Code</div>
-  <div class="tab" data-tab="actions">Actions</div>
+<!-- PROJECT -->
+<div class="card">
+  <div class="h1">📁 Project</div>
+  <div class="hint">Choose existing or create new</div>
+  <select id="projectSelect"></select>
 </div>
 
-<div id="projects" class="view active">
-  <div class="card"><b>Your projects</b><br>
-  <span style="color:var(--muted)">Select or create a project</span></div>
-  <div id="projectsList"></div>
+<!-- TASK -->
+<div class="card">
+  <div class="h1">✍️ Task</div>
+  <div class="hint">Describe what you want to build</div>
+  <textarea id="taskText"
+    placeholder="Example: FastAPI CRUD with JWT auth"></textarea>
 </div>
 
-<div id="task" class="view">
-  <div class="card"><b>Describe your task</b></div>
-  <textarea id="taskText"></textarea>
+<!-- CODE -->
+<div class="card">
+  <div class="h1">💻 Code</div>
+  <div class="hint">Generated result will appear here</div>
+  <pre id="codeText">// waiting for generation…</pre>
 </div>
 
-<div id="code" class="view">
-  <div class="card"><b>Generated code</b></div>
-  <pre id="codeText">// Waiting for generation…</pre>
-</div>
-
-<div id="actions" class="view">
-  <button class="primary" id="btnGenerate">Generate Code</button>
-  <button class="secondary" id="btnSave">Save Project</button>
-  <button class="secondary" id="btnDelete">Delete Project</button>
+<!-- ACTIONS -->
+<div class="card">
+  <button class="btn primary" id="btnGenerate">⚡ Generate code</button>
+  <div class="row">
+    <button class="btn success" id="btnSave">💾 Save</button>
+    <button class="btn danger" id="btnDelete">🗑 Delete</button>
+  </div>
 </div>
 
 </div>
 
 <script>
-const tg=window.Telegram.WebApp;
-tg.expand();tg.ready();
+const tg = window.Telegram.WebApp;
+tg.expand(); tg.ready();
 
-let currentProject=null;
-
-function showTab(id){
- document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
- document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
- document.getElementById(id).classList.add('active');
- document.querySelector(`.tab[data-tab="${id}"]`).classList.add('active');
-}
-
-document.querySelectorAll('.tab').forEach(tab=>{
- tab.addEventListener('click',()=>{
-   showTab(tab.dataset.tab);
- });
-});
+let currentProject = null;
+const select = document.getElementById("projectSelect");
 
 async function loadProjects(){
- const r=await fetch('/projects/list/'+tg.initDataUnsafe.user.id);
- const data=await r.json();
- projectsList.innerHTML=data.length
-  ? data.map(p=>`<div class="card" data-id="${{p.id}}">📄 ${{p.title}}</div>`).join('')
-  : '<div class="card">No projects yet</div>';
-
- document.querySelectorAll('#projectsList .card').forEach(el=>{
-   el.addEventListener('click',()=>openProject(el.dataset.id));
- });
+ const r = await fetch('/projects/list/' + tg.initDataUnsafe.user.id);
+ const data = await r.json();
+ select.innerHTML =
+   '<option value="">➕ New project</option>' +
+   data.map(p=>`<option value="${{p.id}}">${{p.title}}</option>`).join('');
 }
 
-async function openProject(id){
- currentProject=id;
- const r=await fetch('/projects/'+id);
- const p=await r.json();
- taskText.value=p.task;
- codeText.textContent=p.code;
- showTab('task');
-}
+select.addEventListener('change', async ()=>{
+ if(!select.value){ currentProject=null; return; }
+ currentProject = select.value;
+ const r = await fetch('/projects/' + currentProject);
+ const p = await r.json();
+ taskText.value = p.task;
+ codeText.textContent = p.code;
+});
 
-async function generate(){
- const r=await fetch('/generate',{
-  method:'POST',headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({user_id:tg.initDataUnsafe.user.id,text:taskText.value})
- });
- codeText.textContent=(await r.json()).code;
- showTab('code');
-}
-
-async function saveProject(){
- await fetch('/projects/save',{
-  method:'POST',headers:{'Content-Type':'application/json'},
+document.getElementById("btnGenerate").onclick = async ()=>{
+ const r = await fetch('/generate',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
   body:JSON.stringify({
-   user_id:tg.initDataUnsafe.user.id,
-   title:taskText.value.slice(0,40)||'Untitled',
-   task:taskText.value,
-   code:codeText.textContent
+   user_id: tg.initDataUnsafe.user.id,
+   text: taskText.value
+  })
+ });
+ codeText.textContent = (await r.json()).code;
+};
+
+document.getElementById("btnSave").onclick = async ()=>{
+ await fetch('/projects/save',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({
+   user_id: tg.initDataUnsafe.user.id,
+   title: taskText.value.slice(0,40)||'Untitled',
+   task: taskText.value,
+   code: codeText.textContent
   })
  });
  loadProjects();
-}
+};
 
-async function deleteProject(){
- if(!currentProject)return;
+document.getElementById("btnDelete").onclick = async ()=>{
+ if(!currentProject) return;
  await fetch('/projects/delete',{
-  method:'POST',headers:{'Content-Type':'application/json'},
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
   body:JSON.stringify({
-   user_id:tg.initDataUnsafe.user.id,
-   project_id:currentProject
+   user_id: tg.initDataUnsafe.user.id,
+   project_id: currentProject
   })
  });
- taskText.value='';codeText.textContent='';
- loadProjects();showTab('projects');
-}
-
-document.getElementById('btnGenerate').addEventListener('click',generate);
-document.getElementById('btnSave').addEventListener('click',saveProject);
-document.getElementById('btnDelete').addEventListener('click',deleteProject);
+ taskText.value=''; codeText.textContent='';
+ loadProjects();
+};
 
 loadProjects();
 </script>
 </body>
 </html>
 """
+
 
 # ======================= TELEGRAM BOT =================
 
@@ -352,6 +407,7 @@ async def start_bot():
 async def startup():
     await init_db()
     asyncio.create_task(start_bot())
+
 
 
 

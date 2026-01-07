@@ -471,16 +471,28 @@ if (window.Telegram && window.Telegram.WebApp) {
   }
 }
 
-// ⛔ ЕСЛИ НЕ ИЗ TELEGRAM — БЛОКИРУЕМ
-if (!USER_ID) {
-  document.body.innerHTML = `
-    <div style="padding:20px;color:white;font-family:sans-serif">
-      ❌ This app must be opened from Telegram bot.<br><br>
-      👉 Go back to Telegram and press <b>Start</b>.
-    </div>
-  `;
-  throw new Error("Mini App opened outside Telegram");
+const API = location.origin;
+
+const select = document.getElementById("projectSelect");
+const taskText = document.getElementById("taskText");
+const codeText = document.getElementById("codeText");
+
+const btnGenerate = document.getElementById("btnGenerate");
+const btnSave = document.getElementById("btnSave");
+const btnDelete = document.getElementById("btnDelete");
+const btnSend = document.getElementById("btnSend");
+
+let currentProject = null;
+
+/* ===== PROJECT LIST ===== */
+function renderEmptySelect() {
+  select.innerHTML = '<option value="">➕ New project</option>';
 }
+
+async function loadProjects() {
+  renderEmptySelect();
+
+  if (!USER_ID) return;
 
   const r = await fetch(API + "/projects/list/" + USER_ID);
   const data = await r.json();
@@ -490,7 +502,7 @@ if (!USER_ID) {
     data.map(p => `<option value="${p.id}">${p.title}</option>`).join("");
 }
 
-select.addEventListener("change", async () => {
+select.onchange = async () => {
   if (!select.value) {
     currentProject = null;
     taskText.value = "";
@@ -504,25 +516,36 @@ select.addEventListener("change", async () => {
 
   taskText.value = p.task;
   codeText.textContent = p.code;
-});
+};
 
-btnGenerate.addEventListener("click", async () => {
+/* ===== GENERATE (НЕ ЗАВИСИТ ОТ USER_ID) ===== */
+btnGenerate.onclick = async () => {
   codeText.textContent = "⏳ Generating code...";
 
-  const r = await fetch(API + "/generate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      user_id: USER_ID,
-      text: taskText.value
-    })
-  });
+  try {
+    const r = await fetch(API + "/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: USER_ID || 0,
+        text: taskText.value
+      })
+    });
 
-  const data = await r.json();
-  codeText.textContent = data.code || "❌ Empty response";
-});
+    const data = await r.json();
+    codeText.textContent = data.code || "❌ Empty response";
+  } catch (e) {
+    codeText.textContent = "❌ Generate failed";
+  }
+};
 
-btnSave.addEventListener("click", async () => {
+/* ===== SAVE ===== */
+btnSave.onclick = async () => {
+  if (!USER_ID) {
+    alert("❌ Open this app from Telegram bot first");
+    return;
+  }
+
   await fetch(API + "/projects/save", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -534,11 +557,12 @@ btnSave.addEventListener("click", async () => {
     })
   });
 
-  await loadProjects();
-});
+  loadProjects();
+};
 
-btnDelete.addEventListener("click", async () => {
-  if (!currentProject) return;
+/* ===== DELETE ===== */
+btnDelete.onclick = async () => {
+  if (!USER_ID || !currentProject) return;
 
   await fetch(API + "/projects/delete", {
     method: "POST",
@@ -553,9 +577,15 @@ btnDelete.addEventListener("click", async () => {
   taskText.value = "";
   codeText.textContent = "";
   loadProjects();
-});
+};
 
-btnSend.addEventListener("click", async () => {
+/* ===== SEND TO CHAT ===== */
+btnSend.onclick = async () => {
+  if (!USER_ID) {
+    alert("❌ Open this app from Telegram bot first");
+    return;
+  }
+
   await fetch(API + "/projects/send_to_chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -567,7 +597,7 @@ btnSend.addEventListener("click", async () => {
   });
 
   alert("📤 Sent to chat");
-});
+};
 
 loadProjects();
 </script>
@@ -632,6 +662,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

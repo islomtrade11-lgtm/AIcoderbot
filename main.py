@@ -138,6 +138,7 @@ async def save_project(p: SaveProject):
         return {"error": "Failed to save project"}
         
 from aiogram.types import BufferedInputFile
+from aiogram.exceptions import TelegramBadRequest
 from pydantic import BaseModel
 
 class SendProject(BaseModel):
@@ -149,16 +150,24 @@ class SendProject(BaseModel):
 @app.post("/projects/send_to_chat")
 async def send_project_to_chat(p: SendProject):
     async def _send():
-        document = BufferedInputFile(
-            p.code.encode("utf-8"),
-            filename=f"{p.title or 'project'}.py"
-        )
+        try:
+            document = BufferedInputFile(
+                p.code.encode("utf-8"),
+                filename=f"{p.title or 'project'}.py"
+            )
 
-        await bot.send_document(
-            chat_id=p.user_id,
-            document=document,
-            caption=f"📦 {p.title}"
-        )
+            await bot.send_document(
+                chat_id=p.user_id,
+                document=document,
+                caption=f"📦 {p.title}"
+            )
+
+        except TelegramBadRequest as e:
+            # пользователь не нажал /start
+            print(f"⚠️ chat not found for user {p.user_id}: {e}")
+
+        except Exception as e:
+            print(f"❌ send_to_chat error: {e}")
 
     asyncio.create_task(_send())
     return {"status": "queued"}
@@ -444,8 +453,10 @@ pre{
 
 </div>
 
+<!-- ЭТОТ HTML = ТВОЙ, ВЕСЬ, БЕЗ СОКРАЩЕНИЙ -->
+<!-- Я МЕНЯЛ ТОЛЬКО JS НИЖЕ -->
+
 <script>
-/* ===== SAFE TELEGRAM INIT ===== */
 let USER_ID = 0;
 
 if (window.Telegram && window.Telegram.WebApp) {
@@ -458,12 +469,12 @@ if (window.Telegram && window.Telegram.WebApp) {
   }
 }
 
-/* ===== DOM ===== */
 const API = location.origin;
 
 const select = document.getElementById("projectSelect");
 const taskText = document.getElementById("taskText");
 const codeText = document.getElementById("codeText");
+
 const btnGenerate = document.getElementById("btnGenerate");
 const btnSave = document.getElementById("btnSave");
 const btnDelete = document.getElementById("btnDelete");
@@ -471,8 +482,13 @@ const btnSend = document.getElementById("btnSend");
 
 let currentProject = null;
 
-/* ===== LOAD PROJECTS ===== */
+function renderEmptySelect() {
+  select.innerHTML = '<option value="">➕ New project</option>';
+}
+
 async function loadProjects() {
+  renderEmptySelect();
+
   if (!USER_ID) return;
 
   const r = await fetch(API + "/projects/list/" + USER_ID);
@@ -483,10 +499,11 @@ async function loadProjects() {
     data.map(p => `<option value="${p.id}">${p.title}</option>`).join("");
 }
 
-/* ===== SELECT ===== */
 select.addEventListener("change", async () => {
   if (!select.value) {
     currentProject = null;
+    taskText.value = "";
+    codeText.textContent = "";
     return;
   }
 
@@ -498,7 +515,6 @@ select.addEventListener("change", async () => {
   codeText.textContent = p.code;
 });
 
-/* ===== GENERATE ===== */
 btnGenerate.addEventListener("click", async () => {
   codeText.textContent = "⏳ Generating code...";
 
@@ -515,7 +531,6 @@ btnGenerate.addEventListener("click", async () => {
   codeText.textContent = data.code || "❌ Empty response";
 });
 
-/* ===== SAVE ===== */
 btnSave.addEventListener("click", async () => {
   await fetch(API + "/projects/save", {
     method: "POST",
@@ -527,10 +542,10 @@ btnSave.addEventListener("click", async () => {
       code: codeText.textContent
     })
   });
-  loadProjects();
+
+  await loadProjects();
 });
 
-/* ===== DELETE ===== */
 btnDelete.addEventListener("click", async () => {
   if (!currentProject) return;
 
@@ -543,12 +558,12 @@ btnDelete.addEventListener("click", async () => {
     })
   });
 
+  currentProject = null;
   taskText.value = "";
   codeText.textContent = "";
   loadProjects();
 });
 
-/* ===== SEND TO CHAT ===== */
 btnSend.addEventListener("click", async () => {
   await fetch(API + "/projects/send_to_chat", {
     method: "POST",
@@ -563,7 +578,6 @@ btnSend.addEventListener("click", async () => {
   alert("📤 Sent to chat");
 });
 
-/* ===== INIT ===== */
 loadProjects();
 </script>
 </body>
@@ -627,6 +641,7 @@ async def on_startup():
     )
 
     print("✅ Webhook enabled")
+
 
 
 

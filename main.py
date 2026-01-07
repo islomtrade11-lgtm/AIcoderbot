@@ -157,69 +157,48 @@ content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
-:root {
-  --bg:#0b0f14;
-  --panel:#0f172a;
-  --panel2:#111827;
-  --border:#1f2937;
-  --text:#e5e7eb;
-  --muted:#9ca3af;
-  --accent:#6366f1;
+:root{
+ --bg:#0b0f14;--panel:#0f172a;--panel2:#111827;
+ --border:#1f2937;--text:#e5e7eb;--muted:#9ca3af;
+ --accent:#6366f1;
 }
-
 html,body{
-  margin:0;height:100%;background:var(--bg);
-  font-family:Inter,system-ui,sans-serif;
-  color:var(--text);overflow:hidden;
+ margin:0;height:100%;background:var(--bg);
+ font-family:Inter,system-ui,sans-serif;
+ color:var(--text);overflow:hidden
 }
+.app{height:100vh;display:flex;flex-direction:column}
 
-.app{display:flex;flex-direction:column;height:100vh}
-
-/* ---- tabs ---- */
-.tabs{
-  display:flex;background:var(--panel);
-  border-bottom:1px solid var(--border)
-}
+/* tabs */
+.tabs{display:flex;background:var(--panel);border-bottom:1px solid var(--border)}
 .tab{
-  flex:1;text-align:center;padding:14px 0;
-  font-size:14px;color:var(--muted);
+ flex:1;padding:14px 0;text-align:center;
+ color:var(--muted);font-size:14px
 }
-.tab.active{
-  color:#fff;border-bottom:2px solid var(--accent)
-}
+.tab.active{color:#fff;border-bottom:2px solid var(--accent)}
 
-/* ---- views ---- */
-.view{
-  flex:1;display:none;padding:16px;overflow-y:auto
-}
+/* views */
+.view{flex:1;display:none;padding:16px;overflow-y:auto}
 .view.active{display:block}
 
-/* ---- cards ---- */
+/* ui */
 .card{
-  background:var(--panel);
-  border-radius:14px;padding:18px;
-  margin-bottom:14px
+ background:var(--panel);border-radius:14px;
+ padding:18px;margin-bottom:14px
 }
-
 textarea{
-  width:100%;height:200px;
-  background:var(--panel2);
-  border:none;border-radius:12px;
-  padding:14px;color:var(--text);
-  font-size:15px;resize:none
+ width:100%;height:200px;background:var(--panel2);
+ border:none;border-radius:12px;padding:14px;
+ color:var(--text);font-size:15px;resize:none
 }
-
 pre{
-  background:#020617;border-radius:12px;
-  padding:14px;font-size:13px;
-  line-height:1.5;min-height:250px
+ background:#020617;border-radius:12px;
+ padding:14px;font-size:13px;min-height:250px
 }
-
 button{
-  width:100%;padding:16px;
-  border:none;border-radius:14px;
-  font-size:16px;font-weight:600;
-  margin-bottom:12px
+ width:100%;padding:16px;border:none;
+ border-radius:14px;font-size:16px;
+ font-weight:600;margin-bottom:12px
 }
 .primary{background:var(--accent);color:#fff}
 .secondary{background:var(--panel);color:var(--text)}
@@ -229,129 +208,121 @@ button{
 <body>
 <div class="app">
 
-<!-- TABS -->
 <div class="tabs">
-  <div class="tab active" onclick="showTab('projects',this)">Projects</div>
-  <div class="tab" onclick="showTab('task',this)">Task</div>
-  <div class="tab" onclick="showTab('code',this)">Code</div>
-  <div class="tab" onclick="showTab('actions',this)">Actions</div>
+  <div class="tab active" data-tab="projects">Projects</div>
+  <div class="tab" data-tab="task">Task</div>
+  <div class="tab" data-tab="code">Code</div>
+  <div class="tab" data-tab="actions">Actions</div>
 </div>
 
-<!-- PROJECTS -->
 <div id="projects" class="view active">
-  <div class="card">
-    <b>Your projects</b><br>
-    <span style="color:var(--muted)">Select or create a project</span>
-  </div>
+  <div class="card"><b>Your projects</b><br>
+  <span style="color:var(--muted)">Select or create a project</span></div>
   <div id="projectsList"></div>
 </div>
 
-<!-- TASK -->
 <div id="task" class="view">
-  <div class="card">
-    <b>Describe your task</b><br>
-    <span style="color:var(--muted)">
-      Example: FastAPI CRUD with JWT auth
-    </span>
-  </div>
+  <div class="card"><b>Describe your task</b></div>
   <textarea id="taskText"></textarea>
 </div>
 
-<!-- CODE -->
 <div id="code" class="view">
-  <div class="card">
-    <b>Generated code</b><br>
-    <span style="color:var(--muted)">
-      Code will appear here after generation
-    </span>
-  </div>
+  <div class="card"><b>Generated code</b></div>
   <pre id="codeText">// Waiting for generation…</pre>
 </div>
 
-<!-- ACTIONS -->
 <div id="actions" class="view">
-  <div class="card">
-    <button class="primary" onclick="generate()">Generate Code</button>
-    <button class="secondary" onclick="saveProject()">Save Project</button>
-    <button class="secondary" onclick="deleteProject()">Delete Project</button>
-  </div>
+  <button class="primary" id="btnGenerate">Generate Code</button>
+  <button class="secondary" id="btnSave">Save Project</button>
+  <button class="secondary" id="btnDelete">Delete Project</button>
 </div>
 
 </div>
 
 <script>
-const tg=window.Telegram.WebApp;tg.expand();
+const tg=window.Telegram.WebApp;
+tg.expand();tg.ready();
+
 let currentProject=null;
 
-function showTab(id,el){
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  el.classList.add('active');
+function showTab(id){
+ document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+ document.querySelector(`.tab[data-tab="${id}"]`).classList.add('active');
 }
 
+document.querySelectorAll('.tab').forEach(tab=>{
+ tab.addEventListener('click',()=>{
+   showTab(tab.dataset.tab);
+ });
+});
+
 async function loadProjects(){
-  const r=await fetch('/projects/list/'+tg.initDataUnsafe.user.id);
-  const data=await r.json();
-  const list=document.getElementById('projectsList');
-  list.innerHTML=data.length
-    ? data.map(p=>`<div class="card" onclick="openProject(${{p.id}})">📄 ${{p.title}}</div>`).join('')
-    : '<div class="card">No projects yet</div>';
+ const r=await fetch('/projects/list/'+tg.initDataUnsafe.user.id);
+ const data=await r.json();
+ projectsList.innerHTML=data.length
+  ? data.map(p=>`<div class="card" data-id="${{p.id}}">📄 ${{p.title}}</div>`).join('')
+  : '<div class="card">No projects yet</div>';
+
+ document.querySelectorAll('#projectsList .card').forEach(el=>{
+   el.addEventListener('click',()=>openProject(el.dataset.id));
+ });
 }
 
 async function openProject(id){
-  currentProject=id;
-  const r=await fetch('/projects/'+id);
-  const p=await r.json();
-  taskText.value=p.task;
-  codeText.textContent=p.code;
-  showTab('task',document.querySelector('.tab:nth-child(2)'));
+ currentProject=id;
+ const r=await fetch('/projects/'+id);
+ const p=await r.json();
+ taskText.value=p.task;
+ codeText.textContent=p.code;
+ showTab('task');
 }
 
 async function generate(){
-  const r=await fetch('/generate',{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      user_id:tg.initDataUnsafe.user.id,
-      text:taskText.value
-    })
-  });
-  codeText.textContent=(await r.json()).code;
-  showTab('code',document.querySelector('.tab:nth-child(3)'));
+ const r=await fetch('/generate',{
+  method:'POST',headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({user_id:tg.initDataUnsafe.user.id,text:taskText.value})
+ });
+ codeText.textContent=(await r.json()).code;
+ showTab('code');
 }
 
 async function saveProject(){
-  await fetch('/projects/save',{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      user_id:tg.initDataUnsafe.user.id,
-      title:taskText.value.slice(0,40)||'Untitled',
-      task:taskText.value,
-      code:codeText.textContent
-    })
-  });
-  loadProjects();
+ await fetch('/projects/save',{
+  method:'POST',headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({
+   user_id:tg.initDataUnsafe.user.id,
+   title:taskText.value.slice(0,40)||'Untitled',
+   task:taskText.value,
+   code:codeText.textContent
+  })
+ });
+ loadProjects();
 }
 
 async function deleteProject(){
-  if(!currentProject)return;
-  await fetch('/projects/delete',{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      user_id:tg.initDataUnsafe.user.id,
-      project_id:currentProject
-    })
-  });
-  taskText.value='';codeText.textContent='';
-  loadProjects();
+ if(!currentProject)return;
+ await fetch('/projects/delete',{
+  method:'POST',headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({
+   user_id:tg.initDataUnsafe.user.id,
+   project_id:currentProject
+  })
+ });
+ taskText.value='';codeText.textContent='';
+ loadProjects();showTab('projects');
 }
+
+document.getElementById('btnGenerate').addEventListener('click',generate);
+document.getElementById('btnSave').addEventListener('click',saveProject);
+document.getElementById('btnDelete').addEventListener('click',deleteProject);
 
 loadProjects();
 </script>
 </body>
 </html>
 """
-
 
 # ======================= TELEGRAM BOT =================
 
@@ -381,6 +352,7 @@ async def start_bot():
 async def startup():
     await init_db()
     asyncio.create_task(start_bot())
+
 
 
 
